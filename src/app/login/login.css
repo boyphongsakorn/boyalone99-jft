@@ -1,0 +1,37 @@
+:host { --ink: #252525; --paper: #f8f5ec; --muted: #77746d; --line: #c9c3b7; display: block; min-height: 100dvh; }
+* { box-sizing: border-box; }
+.login-page { background: var(--paper); color: var(--ink); display: grid; font-family: 'Playpen Sans Thai', 'Segoe Print', cursive; min-height: 100dvh; overflow: hidden; padding: 42px 7vw 28px; place-items: center; position: relative; }
+.login-page::before { background-image: repeating-linear-gradient(0deg, transparent 0 31px, rgba(114, 145, 153, .13) 32px); content: ''; inset: 0; opacity: .65; pointer-events: none; position: absolute; }
+.ambient { border: 2px solid rgba(30, 39, 48, .11); border-radius: 50%; height: 44vw; max-height: 650px; max-width: 650px; min-height: 340px; min-width: 340px; position: absolute; transform: rotate(-7deg); width: 44vw; }
+.ambient::after { border: 2px solid rgba(30, 39, 48, .08); border-radius: 50%; content: ''; inset: 10%; position: absolute; transform: rotate(13deg); }
+.ambient-left { left: -23vw; top: 7%; }
+.ambient-right { bottom: -20%; right: -20vw; }
+.login-panel { animation: rise-in .7s ease-out both; max-width: 450px; position: relative; width: 100%; z-index: 1; }
+.brand-lockup { align-items: center; color: var(--ink); display: flex; gap: 11px; margin-bottom: 88px; text-decoration: none; transform: rotate(-2deg); }
+.brand-mark { display: flex; gap: 3px; height: 23px; transform: skew(-18deg); width: 26px; }
+.brand-mark i { background: #e16b50; display: block; width: 6px; }
+.brand-mark i:nth-child(2) { background: #e0b44f; height: 78%; margin-top: auto; }
+.brand-mark i:nth-child(3) { background: #5d8278; height: 54%; margin-top: auto; }
+.brand-name { font-size: 1.05rem; font-weight: 700; line-height: 1.05; }
+.brand-name small { color: #5d8278; display: block; font-size: .72rem; letter-spacing: .12em; margin-top: 5px; }
+.eyebrow { color: #5d8278; font-size: .72rem; font-weight: 700; letter-spacing: .08em; margin: 0 0 20px; transform: rotate(-2deg); }
+h1 { font-size: clamp(2.8rem, 5vw, 4.35rem); font-weight: 700; letter-spacing: -.07em; line-height: .94; margin: 0; transform: rotate(-1deg); }
+h1 em { color: #c05d46; font-style: normal; }
+.intro-copy { color: var(--muted); font-size: .95rem; line-height: 1.6; margin: 26px 0 34px; }
+.provider-list { display: grid; gap: 10px; }
+.provider-button { align-items: center; border: 2px solid var(--ink); border-radius: 3px 7px 4px 6px; box-shadow: 3px 3px 0 var(--ink); color: var(--ink); cursor: pointer; display: flex; font: 700 .9rem 'Playpen Sans Thai', cursive; gap: 14px; min-height: 58px; padding: 0 17px; text-align: left; transition: box-shadow .16s ease, transform .16s ease; width: 100%; }
+.provider-button:hover { box-shadow: 1px 1px 0 var(--ink); transform: translate(2px, 2px) rotate(-.5deg); }
+.provider-button:focus-visible, .footer-link:focus-visible { outline: 3px solid #e0b44f; outline-offset: 3px; }
+.discord { background: #dbe6e2; }
+.twitch { background: #e9e0f0; }
+.youtube { background: #f3d8cd; }
+.provider-icon { align-items: center; border: 1px solid currentColor; display: inline-flex; font-size: 1rem; height: 29px; justify-content: center; width: 29px; }
+.arrow { font-size: 1.25rem; margin-left: auto; }
+.status { color: #c05d46; font-size: .78rem; margin: 14px 0 -1px; }
+.terms { color: #969790; font-size: .71rem; line-height: 1.6; margin: 29px 0 0; }
+.terms a, .footer-link { color: var(--ink); text-decoration-color: #e0b44f; text-underline-offset: 3px; }
+.login-footer { align-items: center; border-top: 1px solid var(--line); color: #999b94; display: flex; font-size: .63rem; justify-content: space-between; letter-spacing: .04em; line-height: 1.45; margin-top: 54px; padding-top: 15px; text-transform: uppercase; }
+.login-footer a { text-transform: none; }
+.footer-dot { background: #e0b44f; border-radius: 50%; height: 4px; width: 4px; }
+@keyframes rise-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 640px) { .login-page { padding: 30px 24px 24px; } .brand-lockup { margin-bottom: 70px; } .ambient { opacity: .6; } }
