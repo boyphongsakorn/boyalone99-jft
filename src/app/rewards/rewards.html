@@ -12,14 +12,16 @@
   <section class="hero" aria-labelledby="rewards-title">
     <div>
       <p class="eyebrow">ของรางวัลสำหรับชุมชน</p>
-      <h1 id="rewards-title">Spend your<br /><em>Alone Coin.</em></h1>
+      <h1 id="rewards-title">Spend your <em>Alone Coin.</em></h1>
       <p class="hero-copy">เหรียญเล็ก ๆ จากการอยู่ด้วยกัน ใช้แลกของรางวัลที่ทำมาเพื่อชุมชนของเรา</p>
     </div>
     <div class="coin-balance" aria-label="Your Alone Coin balance">
       <span class="coin-symbol" aria-hidden="true">A</span>
-      <span class="balance-label">You have</span>
-      <strong>{{ balance() | number }}</strong>
-      <span class="balance-name">Alone Coin</span>
+      <span class="balance-copy">
+        <span class="balance-label">You have</span>
+        <strong>{{ balance() | number }}</strong>
+        <span class="balance-name">Alone Coin</span>
+      </span>
       <span class="scribble-arrow" aria-hidden="true">↘</span>
     </div>
   </section>
