@@ -17,6 +17,7 @@ interface Reward {
   templateUrl: './rewards.html',
 })
 export class Rewards {
+  protected readonly isLoggedIn = signal(false);
   protected readonly balance = signal(1250);
   protected readonly notice = signal<string | null>(null);
 
@@ -52,10 +53,14 @@ export class Rewards {
   ];
 
   protected canRedeem(cost: number): boolean {
-    return this.balance() >= cost;
+    return this.isLoggedIn() && this.balance() >= cost;
   }
 
   protected redeem(reward: Reward): void {
+    if (!this.isLoggedIn()) {
+      return;
+    }
+
     if (!this.canRedeem(reward.cost)) {
       this.notice.set('Alone Coin ยังไม่พอสำหรับรางวัลนี้');
       return;

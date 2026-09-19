@@ -51,6 +51,9 @@ h1 em { color: var(--coral); font-style: normal; }
 .balance-label, .balance-name { color: var(--muted); font-size: 0.72rem; }
 .coin-balance strong { font-size: 2rem; letter-spacing: -0.06em; line-height: 1; margin: 2px 0; }
 .scribble-arrow { bottom: -34px; color: var(--coral); font-size: 2.3rem; position: absolute; right: -13px; transform: rotate(-25deg); }
+.login-prompt { align-items: center; background: #fff6d9; border: 2px dashed var(--ink); color: var(--ink); display: flex; font-size: 0.78rem; gap: 28px; justify-content: space-between; min-width: 220px; padding: 13px 18px; text-decoration: none; transform: rotate(3deg); }
+.login-prompt strong { color: var(--coral); font-size: 1rem; }
+.login-prompt:hover { background: #f3e9c9; }
 .notice { background: #fff6d9; border: 1px dashed #b28d31; color: #756023; font-size: 0.82rem; margin-bottom: 26px; padding: 10px 14px; }
 .reward-section { border-top: 2px solid var(--ink); padding-top: 18px; }
 .section-heading { align-items: baseline; display: flex; justify-content: space-between; margin-bottom: 22px; }

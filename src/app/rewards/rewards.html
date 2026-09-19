@@ -15,7 +15,8 @@
       <h1 id="rewards-title">Spend your <em>Alone Coin.</em></h1>
       <p class="hero-copy">เหรียญเล็ก ๆ จากการอยู่ด้วยกัน ใช้แลกของรางวัลที่ทำมาเพื่อชุมชนของเรา</p>
     </div>
-    <div class="coin-balance" aria-label="Your Alone Coin balance">
+    @if (isLoggedIn()) {
+      <div class="coin-balance" aria-label="Your Alone Coin balance">
       <span class="coin-symbol" aria-hidden="true">A</span>
       <span class="balance-copy">
         <span class="balance-label">You have</span>
@@ -23,7 +24,13 @@
         <span class="balance-name">Alone Coin</span>
       </span>
       <span class="scribble-arrow" aria-hidden="true">↘</span>
-    </div>
+      </div>
+    } @else {
+      <a class="login-prompt" routerLink="/login">
+        <span>Sign in to see your<br /><strong>Alone Coin</strong></span>
+        <span aria-hidden="true">↗</span>
+      </a>
+    }
   </section>
 
   @if (notice(); as message) {
@@ -46,12 +53,12 @@
           </div>
           <div class="reward-action">
             <span class="cost"><b>{{ reward.cost | number }}</b> AC</span>
-            <button
-              type="button"
-              [disabled]="!canRedeem(reward.cost)"
-              (click)="redeem(reward)"
-            >
-              Redeem <span aria-hidden="true">↗</span>
+            <button type="button" [disabled]="!isLoggedIn()" (click)="redeem(reward)">
+              @if (isLoggedIn()) {
+                Redeem <span aria-hidden="true">↗</span>
+              } @else {
+                Login to redeem
+              }
             </button>
           </div>
         </article>
