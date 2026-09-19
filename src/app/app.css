@@ -1,8 +1,8 @@
 :host {
-	--ink: #1e2730;
-	--paper: #f5f1e9;
-	--muted: #7b817e;
-	--line: #d8d3ca;
+	--ink: #252525;
+	--paper: #f8f5ec;
+	--muted: #77746d;
+	--line: #c9c3b7;
 	display: block;
 	min-height: 100dvh;
 }
@@ -18,12 +18,12 @@
 	position: relative;
 	display: grid;
 	place-items: center;
-	font-family: 'DM Sans', 'Avenir Next', sans-serif;
+	font-family: 'Segoe Print', 'Bradley Hand', 'Comic Sans MS', cursive;
 }
 
 .login-shell::before {
-	background-image: radial-gradient(#b6b1a8 0.7px, transparent 0.7px);
-	background-size: 17px 17px;
+	background-image: repeating-linear-gradient(0deg, transparent 0 31px, rgba(114, 145, 153, 0.13) 32px);
+	background-size: 100% 32px;
 	content: '';
 	inset: 0;
 	opacity: 0.2;
@@ -32,7 +32,7 @@
 }
 
 .ambient {
-	border: 1px solid rgba(30, 39, 48, 0.1);
+	border: 2px solid rgba(30, 39, 48, 0.11);
 	border-radius: 50%;
 	height: 44vw;
 	max-height: 650px;
@@ -40,41 +40,42 @@
 	min-height: 340px;
 	min-width: 340px;
 	position: absolute;
+	transform: rotate(-7deg);
 	width: 44vw;
 }
 
-.ambient::after { border: 1px solid rgba(30, 39, 48, 0.08); border-radius: 50%; content: ''; inset: 10%; position: absolute; }
+.ambient::after { border: 2px solid rgba(30, 39, 48, 0.08); border-radius: 50%; content: ''; inset: 10%; position: absolute; transform: rotate(13deg); }
 .ambient-left { left: -23vw; top: 7%; }
 .ambient-right { bottom: -20%; right: -20vw; }
 .login-panel { animation: rise-in 0.7s ease-out both; max-width: 450px; position: relative; width: 100%; z-index: 1; }
-.brand-lockup { align-items: center; display: flex; gap: 11px; margin-bottom: 94px; }
+.brand-lockup { align-items: center; display: flex; gap: 11px; margin-bottom: 88px; }
 .brand-mark { display: flex; gap: 3px; height: 23px; transform: skew(-18deg); width: 26px; }
-.brand-mark span { background: #e06f4e; display: block; width: 6px; }
-.brand-mark span:nth-child(2) { background: #d3a34a; height: 78%; margin-top: auto; }
-.brand-mark span:nth-child(3) { background: #5d8278; height: 54%; margin-top: auto; }
-.brand-name { font-size: 1.05rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
-.brand-name span { color: #e06f4e; }
-.eyebrow { color: #a05740; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.19em; margin: 0 0 20px; text-transform: uppercase; }
-h1 { font-family: Georgia, 'Times New Roman', serif; font-size: clamp(2.8rem, 5vw, 4.35rem); font-weight: 400; letter-spacing: -0.055em; line-height: 0.94; margin: 0; }
-h1 em { color: #c8684c; font-style: italic; }
+.brand-mark span { background: #e16b50; display: block; width: 6px; }
+.brand-mark span:nth-child(2) { background: #e0b44f; height: 78%; margin-top: auto; }
+.brand-mark span:nth-child(3) { background: #6c9185; height: 54%; margin-top: auto; }
+.brand-name { font-size: 1.05rem; font-weight: 700; line-height: 1.05; transform: rotate(-2deg); }
+.brand-name small { color: #e16b50; display: block; font-size: 0.72rem; letter-spacing: 0.12em; margin-top: 5px; }
+.eyebrow { color: #c05d46; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; margin: 0 0 20px; transform: rotate(-2deg); }
+h1 { font-size: clamp(2.8rem, 5vw, 4.35rem); font-weight: 700; letter-spacing: -0.07em; line-height: 0.94; margin: 0; transform: rotate(-1deg); }
+h1 em { color: #c05d46; font-style: normal; }
 .intro-copy { color: var(--muted); font-size: 0.95rem; line-height: 1.6; margin: 26px 0 34px; }
 .provider-list { display: grid; gap: 10px; }
-.provider-button { align-items: center; border: 1px solid transparent; border-radius: 4px; color: #fff; cursor: pointer; display: flex; font: 700 0.85rem 'DM Sans', 'Avenir Next', sans-serif; gap: 14px; min-height: 58px; padding: 0 17px; text-align: left; transition: filter 160ms ease, transform 160ms ease; width: 100%; }
-.provider-button:hover { filter: brightness(1.08); transform: translateY(-2px); }
-.provider-button:focus-visible { outline: 3px solid #d3a34a; outline-offset: 3px; }
-.discord { background: #5369a2; }
-.twitch { background: #7254a2; }
-.youtube { background: #c95346; }
-.provider-icon { align-items: center; background: rgba(255, 255, 255, 0.18); display: inline-flex; font-size: 1rem; height: 29px; justify-content: center; width: 29px; }
+.provider-button { align-items: center; border: 2px solid var(--ink); border-radius: 3px 7px 4px 6px; box-shadow: 3px 3px 0 var(--ink); color: var(--ink); cursor: pointer; display: flex; font: 700 0.9rem 'Segoe Print', 'Bradley Hand', cursive; gap: 14px; min-height: 58px; padding: 0 17px; text-align: left; transition: box-shadow 160ms ease, transform 160ms ease; width: 100%; }
+.provider-button:hover { box-shadow: 1px 1px 0 var(--ink); transform: translate(2px, 2px) rotate(-0.5deg); }
+.provider-button:focus-visible { outline: 3px solid #e0b44f; outline-offset: 3px; }
+.discord { background: #dbe6e2; }
+.twitch { background: #e9e0f0; }
+.youtube { background: #f3d8cd; }
+.provider-icon { align-items: center; background: transparent; border: 1px solid currentColor; display: inline-flex; font-size: 1rem; height: 29px; justify-content: center; width: 29px; }
 .discord-icon { border-radius: 9px; font-weight: 900; }
 .twitch-icon { font-weight: 900; transform: skew(-9deg); }
 .youtube-icon { border-radius: 7px; font-size: 0.7rem; }
 .arrow { font-size: 1.25rem; font-weight: 400; margin-left: auto; }
-.status { color: #a05740; font-size: 0.78rem; margin: 14px 0 -1px; }
+.status { color: #c05d46; font-size: 0.78rem; margin: 14px 0 -1px; }
 .terms { color: #969790; font-size: 0.71rem; line-height: 1.6; margin: 29px 0 0; }
-.terms a { color: var(--ink); text-decoration-color: #d3a34a; text-underline-offset: 3px; }
+.terms a { color: var(--ink); text-decoration-color: #e0b44f; text-underline-offset: 3px; }
 .login-footer { align-items: center; border-top: 1px solid var(--line); color: #999b94; display: flex; font-size: 0.63rem; justify-content: space-between; letter-spacing: 0.04em; line-height: 1.45; margin-top: 54px; padding-top: 15px; text-transform: uppercase; }
-.footer-dot { background: #d3a34a; border-radius: 50%; height: 4px; width: 4px; }
+.footer-dot { background: #e0b44f; border-radius: 50%; height: 4px; width: 4px; }
 .page-note { bottom: 36px; color: rgba(30, 39, 48, 0.09); font-size: clamp(1.5rem, 3vw, 3.2rem); font-weight: 700; line-height: 0.9; margin: 0; position: absolute; right: 7vw; text-align: right; }
 .page-note strong { color: rgba(200, 104, 76, 0.12); }
 
