@@ -21,7 +21,7 @@ h1 em { color: #c05d46; font-style: normal; }
 .provider-list { display: grid; gap: 10px; }
 .provider-button { align-items: center; border: 2px solid var(--ink); border-radius: 3px 7px 4px 6px; box-shadow: 3px 3px 0 var(--ink); color: var(--ink); cursor: pointer; display: flex; font: 700 .9rem 'Playpen Sans Thai', cursive; gap: 14px; min-height: 58px; padding: 0 17px; text-align: left; transition: box-shadow .16s ease, transform .16s ease; width: 100%; }
 .provider-button:hover { box-shadow: 1px 1px 0 var(--ink); transform: translate(2px, 2px) rotate(-.5deg); }
-.provider-button:focus-visible, .footer-link:focus-visible { outline: 3px solid #e0b44f; outline-offset: 3px; }
+.provider-button:focus-visible, .back-button:focus-visible { outline: 3px solid #e0b44f; outline-offset: 3px; }
 .discord { background: #dbe6e2; }
 .twitch { background: #e9e0f0; }
 .youtube { background: #f3d8cd; }
@@ -29,9 +29,10 @@ h1 em { color: #c05d46; font-style: normal; }
 .arrow { font-size: 1.25rem; margin-left: auto; }
 .status { color: #c05d46; font-size: .78rem; margin: 14px 0 -1px; }
 .terms { color: #969790; font-size: .71rem; line-height: 1.6; margin: 29px 0 0; }
-.terms a, .footer-link { color: var(--ink); text-decoration-color: #e0b44f; text-underline-offset: 3px; }
+.terms a { color: var(--ink); text-decoration-color: #e0b44f; text-underline-offset: 3px; }
 .login-footer { align-items: center; border-top: 1px solid var(--line); color: #999b94; display: flex; font-size: .63rem; justify-content: space-between; letter-spacing: .04em; line-height: 1.45; margin-top: 54px; padding-top: 15px; text-transform: uppercase; }
-.login-footer a { text-transform: none; }
+.back-button { background: var(--ink); border: 2px solid var(--ink); border-radius: 3px 6px 3px 5px; box-shadow: 2px 2px 0 #e0b44f; color: var(--paper); padding: 7px 10px; text-decoration: none; text-transform: none; transition: background .16s ease, transform .16s ease; }
+.back-button:hover { background: #c05d46; transform: translateY(-1px) rotate(-1deg); }
 .footer-dot { background: #e0b44f; border-radius: 50%; height: 4px; width: 4px; }
 @keyframes rise-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 640px) { .login-page { padding: 30px 24px 24px; } .brand-lockup { margin-bottom: 70px; } .ambient { opacity: .6; } }
