@@ -1,0 +1,91 @@
+:host {
+  --ink: #252525;
+  --paper: #f8f5ec;
+  --muted: #77746d;
+  --line: #c9c3b7;
+  --coral: #c05d46;
+  --teal: #5d8278;
+  display: block;
+}
+
+* { box-sizing: border-box; }
+
+.rewards-page {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Playpen Sans Thai', 'Segoe Print', cursive;
+  min-height: 100dvh;
+  overflow: hidden;
+  padding: 28px clamp(24px, 7vw, 110px) 24px;
+  position: relative;
+}
+
+.rewards-page::before {
+  background-image: repeating-linear-gradient(0deg, transparent 0 31px, rgba(114, 145, 153, 0.13) 32px);
+  content: '';
+  inset: 0;
+  opacity: 0.65;
+  pointer-events: none;
+  position: absolute;
+}
+
+.paper-line { border: 2px solid rgba(37, 37, 37, 0.08); border-radius: 50%; height: 680px; position: absolute; right: -350px; top: 80px; transform: rotate(10deg); width: 680px; }
+.paper-line::after { border: 2px solid rgba(37, 37, 37, 0.06); border-radius: 50%; content: ''; inset: 9%; position: absolute; transform: rotate(-17deg); }
+.site-header, .hero, .notice, .reward-section, .page-footer { margin-inline: auto; max-width: 1180px; position: relative; z-index: 1; }
+.site-header { align-items: center; display: flex; justify-content: space-between; }
+.brand { align-items: center; color: var(--ink); display: flex; font-size: 1rem; font-weight: 700; gap: 10px; line-height: 1; text-decoration: none; transform: rotate(-2deg); }
+.brand small { color: var(--teal); display: block; font-size: 0.65rem; letter-spacing: 0.12em; margin-top: 6px; }
+.brand-mark { display: flex; gap: 3px; height: 23px; transform: skew(-18deg); width: 26px; }
+.brand-mark i { background: #e16b50; display: block; width: 6px; }
+.brand-mark i:nth-child(2) { background: #e0b44f; height: 78%; margin-top: auto; }
+.brand-mark i:nth-child(3) { background: var(--teal); height: 54%; margin-top: auto; }
+.header-note, .section-heading span { color: var(--muted); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.hero { align-items: end; display: flex; justify-content: space-between; padding: clamp(70px, 11vw, 145px) 8% 72px; }
+.eyebrow { color: var(--teal); font-size: 0.75rem; font-weight: 700; margin: 0 0 18px; transform: rotate(-2deg); }
+h1 { font-size: clamp(3.4rem, 8vw, 7.4rem); letter-spacing: -0.09em; line-height: 0.84; margin: 0; transform: rotate(-2deg); }
+h1 em { color: var(--coral); font-style: normal; }
+.hero-copy { color: var(--muted); font-size: 0.9rem; line-height: 1.7; margin: 28px 0 0; max-width: 460px; }
+.coin-balance { background: #e4eee9; border: 2px solid var(--ink); border-radius: 4px 9px 5px 8px; box-shadow: 5px 5px 0 var(--ink); display: grid; min-width: 220px; padding: 24px 25px 22px; position: relative; transform: rotate(3deg); }
+.coin-symbol { align-items: center; background: #e0b44f; border: 2px solid var(--ink); border-radius: 50%; display: flex; font-size: 1.25rem; font-weight: 700; height: 42px; justify-content: center; margin-bottom: 16px; width: 42px; }
+.balance-label, .balance-name { color: var(--muted); font-size: 0.72rem; }
+.coin-balance strong { font-size: 2.5rem; letter-spacing: -0.06em; line-height: 1; margin: 4px 0; }
+.scribble-arrow { bottom: -34px; color: var(--coral); font-size: 2.3rem; position: absolute; right: -13px; transform: rotate(-25deg); }
+.notice { background: #fff6d9; border: 1px dashed #b28d31; color: #756023; font-size: 0.82rem; margin-bottom: 26px; padding: 10px 14px; }
+.reward-section { border-top: 2px solid var(--ink); padding-top: 18px; }
+.section-heading { align-items: baseline; display: flex; justify-content: space-between; margin-bottom: 22px; }
+.section-heading h2 { font-size: 1.35rem; margin: 0; }
+.reward-grid { display: grid; gap: 16px; grid-template-columns: repeat(4, 1fr); }
+.reward-card { border: 2px solid var(--ink); border-radius: 4px 8px 5px 7px; box-shadow: 3px 3px 0 var(--ink); display: flex; flex-direction: column; min-height: 305px; padding: 18px; transform: rotate(-0.6deg); transition: transform 160ms ease, box-shadow 160ms ease; }
+.reward-card:nth-child(even) { transform: rotate(0.8deg); }
+.reward-card:hover { box-shadow: 1px 1px 0 var(--ink); transform: translate(2px, 2px) rotate(0deg); }
+.reward-art { align-items: center; border: 2px solid currentColor; border-radius: 50% 45% 55% 42%; display: flex; font-size: 2rem; height: 72px; justify-content: center; margin-bottom: 28px; transform: rotate(-7deg); width: 72px; }
+.peach { background: #f3d8cd; color: #9d523d; }
+.mint { background: #dbe6e2; color: #426e62; }
+.lilac { background: #e9e0f0; color: #74517e; }
+.gold { background: #f3e9c9; color: #92752c; }
+.reward-content { flex: 1; }
+.reward-content h3 { font-size: 1.02rem; line-height: 1.15; margin: 0 0 10px; }
+.reward-content p { color: var(--muted); font-size: 0.76rem; line-height: 1.55; margin: 0; }
+.reward-action { align-items: center; border-top: 1px dashed rgba(37, 37, 37, 0.3); display: flex; justify-content: space-between; margin-top: 20px; padding-top: 13px; }
+.cost { color: var(--muted); font-size: 0.7rem; }
+.cost b { color: var(--ink); font-size: 1rem; }
+.reward-action button { background: var(--ink); border: 2px solid var(--ink); border-radius: 3px 5px 3px 4px; color: var(--paper); cursor: pointer; font: 600 0.73rem 'Playpen Sans Thai', cursive; padding: 7px 9px; }
+.reward-action button:hover { background: var(--coral); border-color: var(--coral); }
+.reward-action button:disabled { background: transparent; color: #aaa59b; cursor: not-allowed; }
+.reward-action button:focus-visible { outline: 3px solid #e0b44f; outline-offset: 3px; }
+.page-footer { border-top: 1px solid var(--line); color: var(--muted); display: flex; font-size: 0.66rem; justify-content: space-between; margin-top: 70px; padding-top: 14px; }
+
+@media (max-width: 900px) {
+  .hero { padding-inline: 0; }
+  .reward-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .rewards-page { padding-inline: 20px; }
+  .header-note { display: none; }
+  .hero { align-items: start; flex-direction: column; gap: 48px; padding-bottom: 62px; padding-top: 76px; }
+  h1 { font-size: clamp(3.2rem, 16vw, 5rem); }
+  .coin-balance { align-self: end; }
+  .reward-grid { grid-template-columns: 1fr; }
+  .page-footer { flex-direction: column; gap: 8px; margin-top: 48px; }
+}

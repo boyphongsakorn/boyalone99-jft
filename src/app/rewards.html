@@ -1,0 +1,64 @@
+<main class="rewards-page">
+  <div class="paper-line" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <a class="brand" routerLink="/" aria-label="BoyAlone99 Community home">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span>BoyAlone99 <small>Community</small></span>
+    </a>
+    <span class="header-note">reward shelf / 01</span>
+  </header>
+
+  <section class="hero" aria-labelledby="rewards-title">
+    <div>
+      <p class="eyebrow">ของรางวัลสำหรับชุมชน</p>
+      <h1 id="rewards-title">Spend your<br /><em>Alone Coin.</em></h1>
+      <p class="hero-copy">เหรียญเล็ก ๆ จากการอยู่ด้วยกัน ใช้แลกของรางวัลที่ทำมาเพื่อชุมชนของเรา</p>
+    </div>
+    <div class="coin-balance" aria-label="Your Alone Coin balance">
+      <span class="coin-symbol" aria-hidden="true">A</span>
+      <span class="balance-label">You have</span>
+      <strong>{{ balance() | number }}</strong>
+      <span class="balance-name">Alone Coin</span>
+      <span class="scribble-arrow" aria-hidden="true">↘</span>
+    </div>
+  </section>
+
+  @if (notice(); as message) {
+    <p class="notice" role="status">{{ message }}</p>
+  }
+
+  <section class="reward-section" aria-labelledby="available-title">
+    <div class="section-heading">
+      <h2 id="available-title">Available rewards</h2>
+      <span>pick a little something</span>
+    </div>
+
+    <div class="reward-grid">
+      @for (reward of rewards; track reward.title) {
+        <article class="reward-card" [class]="reward.accent">
+          <div class="reward-art" aria-hidden="true">{{ reward.icon }}</div>
+          <div class="reward-content">
+            <h3>{{ reward.title }}</h3>
+            <p>{{ reward.description }}</p>
+          </div>
+          <div class="reward-action">
+            <span class="cost"><b>{{ reward.cost | number }}</b> AC</span>
+            <button
+              type="button"
+              [disabled]="!canRedeem(reward.cost)"
+              (click)="redeem(reward)"
+            >
+              Redeem <span aria-hidden="true">↗</span>
+            </button>
+          </div>
+        </article>
+      }
+    </div>
+  </section>
+
+  <footer class="page-footer">
+    <span>Made with care for the BoyAlone99 community.</span>
+    <span>Alone Coin is mock data for now · v1.0</span>
+  </footer>
+</main>

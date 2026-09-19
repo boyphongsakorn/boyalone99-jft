@@ -1,13 +1,4 @@
-:host {
-	--ink: #252525;
-	--paper: #f8f5ec;
-	--muted: #77746d;
-	--line: #c9c3b7;
-	display: block;
-	min-height: 100dvh;
-}
-
-* { box-sizing: border-box; }
+:host { display: block; min-height: 100dvh; }
 
 .login-shell {
 	background: var(--paper);
