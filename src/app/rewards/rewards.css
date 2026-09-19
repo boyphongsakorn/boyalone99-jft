@@ -45,6 +45,7 @@
 h1 { font-size: clamp(2rem, 4.5vw, 4rem); letter-spacing: -0.08em; line-height: 1; margin: 0; transform: rotate(-2deg); white-space: nowrap; }
 h1 em { color: var(--coral); font-style: normal; }
 .hero-copy { color: var(--muted); font-size: 0.9rem; line-height: 1.7; margin: 28px 0 0; max-width: 460px; }
+.coin-guide-link { color: var(--ink); display: inline-block; font-size: 0.76rem; margin-top: 18px; text-decoration-color: #e0b44f; text-underline-offset: 4px; transform: rotate(-1deg); }
 .coin-balance { align-items: center; background: #e4eee9; border: 2px solid var(--ink); border-radius: 4px 9px 5px 8px; box-shadow: 5px 5px 0 var(--ink); display: flex; gap: 13px; min-width: 220px; padding: 13px 18px; position: relative; transform: rotate(3deg); }
 .coin-symbol { align-items: center; background: #e0b44f; border: 2px solid var(--ink); border-radius: 50%; display: flex; flex: 0 0 42px; font-size: 1.25rem; font-weight: 700; height: 42px; justify-content: center; width: 42px; }
 .balance-copy { display: grid; }

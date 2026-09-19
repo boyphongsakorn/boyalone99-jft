@@ -1,0 +1,39 @@
+:host { --ink: #252525; --paper: #f8f5ec; --muted: #77746d; --line: #c9c3b7; --coral: #c05d46; --teal: #5d8278; display: block; }
+* { box-sizing: border-box; }
+.coin-guide { background: var(--paper); color: var(--ink); font-family: 'Playpen Sans Thai', 'Segoe Print', cursive; min-height: 100dvh; overflow: hidden; padding: 28px clamp(24px, 7vw, 110px) 24px; position: relative; }
+.coin-guide::before { background-image: repeating-linear-gradient(0deg, transparent 0 31px, rgba(114, 145, 153, .13) 32px); content: ''; inset: 0; opacity: .65; pointer-events: none; position: absolute; }
+.guide-header, .guide-intro, .steps, .guide-note, .guide-footer { margin-inline: auto; max-width: 920px; position: relative; z-index: 1; }
+.guide-header { align-items: center; display: flex; justify-content: space-between; }
+.brand { align-items: center; color: var(--ink); display: flex; font-size: 1rem; font-weight: 700; gap: 10px; line-height: 1; text-decoration: none; transform: rotate(-2deg); }
+.brand small { color: var(--teal); display: block; font-size: .65rem; letter-spacing: .12em; margin-top: 6px; }
+.brand-mark { display: flex; gap: 3px; height: 23px; transform: skew(-18deg); width: 26px; }
+.brand-mark i { background: #e16b50; display: block; width: 6px; }
+.brand-mark i:nth-child(2) { background: #e0b44f; height: 78%; margin-top: auto; }
+.brand-mark i:nth-child(3) { background: var(--teal); height: 54%; margin-top: auto; }
+.back-link, .guide-footer a { color: var(--ink); font-size: .72rem; text-decoration-color: #e0b44f; text-underline-offset: 4px; }
+.guide-intro { padding: 100px 8% 76px; }
+.eyebrow { color: var(--teal); font-size: .75rem; font-weight: 700; margin: 0 0 18px; transform: rotate(-2deg); }
+h1 { font-size: clamp(3rem, 7vw, 6rem); letter-spacing: -.09em; line-height: .87; margin: 0; transform: rotate(-2deg); }
+h1 em { color: var(--coral); font-style: normal; }
+.guide-intro > p:last-child { color: var(--muted); font-size: .92rem; line-height: 1.75; margin: 30px 0 0; max-width: 560px; }
+.steps { border-top: 2px solid var(--ink); padding-top: 18px; }
+.section-heading { align-items: baseline; display: flex; justify-content: space-between; }
+.section-heading h2 { font-size: 1.35rem; margin: 0; }
+.section-heading span { color: var(--muted); font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; }
+.step-list { display: grid; gap: 12px; list-style: none; margin: 23px 0 0; padding: 0; }
+.step-card { align-items: center; border: 2px solid var(--ink); border-radius: 4px 8px 5px 7px; box-shadow: 3px 3px 0 var(--ink); display: grid; gap: 18px; grid-template-columns: 42px 50px 1fr auto; padding: 16px 20px; transform: rotate(-.5deg); }
+.step-card:nth-child(2) { transform: rotate(.6deg); }
+.step-card:nth-child(3) { transform: rotate(-.3deg); }
+.peach { background: #f3d8cd; }
+.mint { background: #dbe6e2; }
+.gold { background: #f3e9c9; }
+.step-number { color: var(--muted); font-size: .72rem; }
+.step-icon { align-items: center; border: 2px solid currentColor; border-radius: 50% 45% 55% 42%; display: flex; font-size: 1.3rem; height: 45px; justify-content: center; transform: rotate(-8deg); width: 45px; }
+.step-card h3 { font-size: 1rem; margin: 0 0 5px; }
+.step-card p { color: var(--muted); font-size: .76rem; line-height: 1.5; margin: 0; }
+.step-card strong { font-size: .9rem; white-space: nowrap; }
+.guide-note { align-items: center; background: #fff6d9; border: 1px dashed #b28d31; color: #756023; display: flex; font-size: .78rem; gap: 12px; margin-top: 32px; padding: 11px 15px; }
+.guide-note span { font-size: 1.3rem; }
+.guide-note p { margin: 0; }
+.guide-footer { border-top: 1px solid var(--line); color: var(--muted); display: flex; font-size: .66rem; justify-content: space-between; margin-top: 62px; padding-top: 14px; }
+@media (max-width: 600px) { .coin-guide { padding-inline: 20px; } .back-link { font-size: 0; } .back-link::after { content: 'Back'; font-size: .72rem; } .guide-intro { padding: 78px 0 58px; } h1 { font-size: clamp(3rem, 16vw, 5rem); } .step-card { align-items: start; grid-template-columns: 30px 44px 1fr; padding: 14px; } .step-card strong { grid-column: 3; } .guide-footer { flex-direction: column; gap: 8px; margin-top: 44px; } }
