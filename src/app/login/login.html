@@ -15,17 +15,17 @@
     </div>
 
     <div class="provider-list" aria-label="Sign in options">
-      <button class="provider-button discord" type="button" (click)="selectProvider('Discord')">
+      <button class="provider-button discord" type="button" (click)="handleLogin('Discord')">
         <span class="provider-icon" aria-hidden="true">D</span>
         <span>Continue with Discord</span>
         <span class="arrow" aria-hidden="true">&#8594;</span>
       </button>
-      <button class="provider-button twitch" type="button" (click)="selectProvider('Twitch')">
+      <button class="provider-button twitch" type="button" (click)="handleLogin('Twitch')">
         <span class="provider-icon" aria-hidden="true">T</span>
         <span>Continue with Twitch</span>
         <span class="arrow" aria-hidden="true">&#8594;</span>
       </button>
-      <button class="provider-button youtube" type="button" (click)="selectProvider('YouTube')">
+      <button class="provider-button youtube" type="button" (click)="handleLogin('YouTube')">
         <span class="provider-icon" aria-hidden="true">&#9654;</span>
         <span>Continue with YouTube</span>
         <span class="arrow" aria-hidden="true">&#8594;</span>
