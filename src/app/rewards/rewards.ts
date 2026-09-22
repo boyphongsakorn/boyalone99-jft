@@ -8,6 +8,7 @@ interface Reward {
   readonly cost: number;
   readonly accent: string;
   readonly icon: string;
+  readonly stock: number;
 }
 
 @Component({
@@ -28,6 +29,7 @@ export class Rewards {
       cost: 50,
       accent: 'peach',
       icon: '✦',
+      stock: 100,
     },
     {
       title: 'Community Shout-out',
@@ -35,6 +37,7 @@ export class Rewards {
       cost: 100,
       accent: 'mint',
       icon: '♡',
+      stock: 20,
     },
     {
       title: 'Behind-the-scenes Note',
@@ -42,6 +45,7 @@ export class Rewards {
       cost: 150,
       accent: 'lilac',
       icon: '✎',
+      stock: 10,
     },
     {
       title: 'Alone Limited Badge',
@@ -49,6 +53,7 @@ export class Rewards {
       cost: 200,
       accent: 'gold',
       icon: '◇',
+      stock: 5,
     },
     {
       title: 'Steam Gift: Papers, Please',
@@ -56,6 +61,7 @@ export class Rewards {
       cost: 250,
       accent: 'peach',
       icon: '🎮',
+      stock: 3,
     },
     {
       title: 'Fortnite Battle Pass',
@@ -63,6 +69,7 @@ export class Rewards {
       cost: 275,
       accent: 'mint',
       icon: '🏆',
+      stock: 15,
     },
     {
       title: 'Steam Gift: Warframe The Old Peace Uriel Bundle',
@@ -70,6 +77,7 @@ export class Rewards {
       cost: 300,
       accent: 'gold',
       icon: '💎',
+      stock: 2,
     },
   ];
 
