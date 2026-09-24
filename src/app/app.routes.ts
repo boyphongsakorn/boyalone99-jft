@@ -7,4 +7,7 @@ import { Rewards } from './rewards/rewards';
 export const routes: Routes = [
   { path: '', component: Rewards },
   { path: 'profile', component: Profile },
+  { path: 'alone-coin', component: AloneCoin },
+  { path: 'login', component: Login },
+  { path: '**', redirectTo: '' },
 ];
