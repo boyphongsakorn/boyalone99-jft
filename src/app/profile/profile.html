@@ -1,0 +1,71 @@
+<main class="profile-page">
+  <div class="paper-line" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <a class="brand" routerLink="/" aria-label="Back to rewards">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span>BoyAlone99 <small>Community</small></span>
+    </a>
+    <a class="back-link" routerLink="/">&#8592; Rewards</a>
+  </header>
+
+  <section class="profile-panel" aria-labelledby="profile-title">
+    <header class="profile-header">
+      <div class="avatar-placeholder" aria-hidden="true">A</div>
+      <div>
+        <h1 id="profile-title">My Profile</h1>
+        <p class="subtitle">Manage your identity in the community</p>
+      </div>
+    </header>
+
+    <div class="settings-grid">
+      <div class="setting-row">
+        <label for="email">Email Address</label>
+        <div class="input-wrapper">
+          <input 
+            id="email" 
+            type="email" 
+            [(ngModel)]="email" 
+            [disabled]="!isEditing()"
+            placeholder="email@example.com"
+          />
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <label for="epic">Epic Username</label>
+        <div class="input-wrapper">
+          <input 
+            id="epic" 
+            type="text" 
+            [(ngModel)]="epicUsername" 
+            [disabled]="!isEditing()"
+            placeholder="EpicUsername"
+          />
+        </div>
+      </div>
+    </div>
+
+    <div class="action-bar">
+      <button 
+        class="save-btn" 
+        (click)="toggleEdit()" 
+        [disabled]="saveStatus() === 'saving'"
+      >
+        @if (isEditing()) {
+          @if (saveStatus() === 'saving') {
+            Saving...
+          } @else {
+            Save Changes
+          }
+        } @else {
+          Edit Profile
+        }
+      </button>
+      
+      @if (saveStatus() === 'saved') {
+        <span class="saved-pill">Changes saved!</span>
+      }
+    </div>
+  </section>
+</main>
