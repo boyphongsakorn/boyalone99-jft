@@ -2,6 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
+import { environment } from '../../environments/environment';
 
 interface DiscordUser {
   username: string;
@@ -90,12 +91,17 @@ export class LoginCallback implements OnInit {
     }
 
     try {
-      // In a real app, this call must be made to YOUR backend server, not directly to Discord
-      // because the Client Secret must never be exposed to the browser.
-      // Here we simulate the backend process.
-      const userData = await this.fetchDiscordUser(code);
-      this.user.set(userData);
-      this.userAvatar.set(`https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png`);
+      // Call the real backend API to exchange the code for a user profile
+      const userData = await this.http.get<{ DiscordUser }>(
+        `${environment.apiUrl}/auth/discord/callback?code=${code}`
+      ).toPromise();
+      
+      const user = userData as DiscordUser;
+      this.user.set(user);
+      this.userAvatar.set(`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`);
+      
+      // Save to local session for the profile page
+      localStorage.setItem('user_profile', JSON.stringify(user));
     } catch (e) {
       this.error.set('Failed to authenticate with Discord.');
     } finally {
@@ -103,18 +109,8 @@ export class LoginCallback implements OnInit {
     }
   }
 
-  private async fetchDiscordUser(code: string): Promise<DiscordUser> {
-    // Mocking the backend response for the demo
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          id: '1234567890',
-          username: 'BoyAlone99_Fan',
-          avatar: 'a_b_c_d',
-        });
-      }, 1500);
-    });
-  }
+  // Removed the mock fetchDiscordUser method
+
 }
 
 interface DiscordUser {
