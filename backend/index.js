@@ -16,22 +16,45 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'BoyAlone99 Backend is running' });
 });
 
-// OAuth Callback Handler (Placeholder for the logic we discussed)
+// OAuth Callback Handler
 app.get('/auth/discord/callback', async (req, res) => {
   const code = req.query.code;
   if (!code) return res.status(400).json({ error: 'Missing code' });
 
   try {
     // 1. Exchange code for access token
-    // 2. Fetch user profile from Discord
-    // 3. Save/Update user in DB
+    const tokenResponse = await axios.post('https://discord.com/api/oauth2/token', new URLSearchParams({
+      client_id: process.env.DISCORD_CLIENT_ID,
+      client_secret: process.env.DISCORD_CLIENT_SECRET,
+      code: code,
+      grant_type: 'authorization_code',
+      redirect_uri: process.env.REDIRECT_URI || 'https://neon-granita-d423fd.netlify.app/login/callback',
+    }), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+
+    const accessToken = tokenResponse.data.access_token;
+
+    // 2. Fetch user profile from Discord using the token
+    const userResponse = await axios.get('https://discord.com/api/users/@me', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    const discordUser = userResponse.data;
+
+    // 3. Mock DB: Save/Update user
+    users[discordUser.id] = {
+      username: discordUser.username,
+      avatar: discordUser.avatar,
+      email: discordUser.email,
+    };
+
     // 4. Send profile back to frontend
     res.json({ 
-      username: 'BoyAlone99_Fan', 
-      avatar: 'a_b_c_d', 
-      id: '1234567890' 
+      username: discordUser.username, 
+      avatar: discordUser.avatar, 
+      id: discordUser.id 
     });
   } catch (error) {
+    console.error('Discord Auth Error:', error.response?.data || error.message);
     res.status(500).json({ error: 'Authentication failed' });
   }
 });

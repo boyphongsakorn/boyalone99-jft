@@ -11,7 +11,9 @@
 
   <section class="profile-panel" aria-labelledby="profile-title">
     <header class="profile-header">
-      <div class="avatar-placeholder" aria-hidden="true">A</div>
+      <div class="avatar-placeholder" aria-hidden="true">
+        <img [src]="userAvatar()" alt="Profile Avatar">
+      </div>
       <div>
         <h1 id="profile-title">My Profile</h1>
         <p class="subtitle">Manage your identity in the community</p>
