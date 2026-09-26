@@ -92,7 +92,7 @@ export class LoginCallback implements OnInit {
 
     try {
       // Call the real backend API to exchange the code for a user profile
-      const userData = await this.http.get<{ DiscordUser }>(
+      const userData = await this.http.get<DiscordUser>(
         `${environment.apiUrl}/auth/discord/callback?code=${code}`
       ).toPromise();
       
