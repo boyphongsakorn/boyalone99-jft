@@ -1,0 +1,63 @@
+:host {
+  --ink: #252525;
+  --paper: #f8f5ec;
+  --muted: #77746d;
+  --line: #c9c3b7;
+  --coral: #c05d46;
+  --teal: #5d8278;
+  display: block;
+}
+* { box-sizing: border-box; }
+.auth-shell {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Playpen Sans Thai', 'Segoe Print', cursive;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  position: relative;
+}
+.paper-line { border: 2px solid rgba(37, 37, 37, .08); border-radius: 50%; height: 500px; position: absolute; left: -250px; top: 100px; transform: rotate(-10deg); width: 500px; }
+.auth-panel { 
+  background: rgba(255, 255, 255, 0.3);
+  border: 2px solid var(--ink);
+  border-radius: 4px 12px 6px 10px;
+  box-shadow: 6px 6px 0 var(--ink);
+  max-width: 400px;
+  width: 100%;
+  padding: 40px;
+  text-align: center;
+  z-index: 1;
+}
+.auth-header { margin-bottom: 32px; }
+.auth-header h1 { font-size: 1.8rem; margin: 0; transform: rotate(-1deg); }
+.subtitle { color: var(--muted); font-size: .85rem; margin-top: 8px; }
+.qr-section { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 32px; }
+.qr-label { font-size: .75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+.qr-image { background: #fff; border: 2px solid var(--ink); border-radius: 8px; width: 180px; height: 180px; }
+.otp-section { display: grid; gap: 16px; }
+.otp-input { 
+  background: #fff; 
+  border: 2px solid var(--ink); 
+  border-radius: 4px 8px 4px 6px; 
+  color: var(--ink); 
+  font-family: inherit; 
+  font-size: 1.5rem; 
+  padding: 12px; 
+  text-align: center; 
+  width: 100%; 
+  letter-spacing: 0.5em;
+}
+.verify-btn { 
+  background: var(--ink); 
+  border: 2px solid var(--ink); 
+  border-radius: 4px 8px 4px 6px; 
+  color: var(--paper); 
+  cursor: pointer; 
+  font: 700 .85rem inherit; 
+  padding: 12px; 
+  transition: background .16s ease;
+}
+.verify-btn:hover { background: var(--coral); border-color: var(--coral); }
+.error-msg { color: var(--coral); font-size: .8rem; margin-top: 16px; font-weight: 700; }

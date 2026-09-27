@@ -1,0 +1,35 @@
+<main class="auth-shell">
+  <div class="paper-line" aria-hidden="true"></div>
+
+  <section class="auth-panel">
+    <header class="auth-header">
+      <div class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <h1>Admin Access</h1>
+      <p class="subtitle">Enter 2FA token to enter the dashboard</p>
+    </header>
+
+    @if (qrCode()) {
+      <div class="qr-section">
+        <p class="qr-label">Scan this with Google Authenticator</p>
+        <img [src]="qrCode()" alt="2FA QR Code" class="qr-image">
+      </div>
+    }
+
+    <div class="otp-section">
+      <input 
+        type="text" 
+        maxlength="6" 
+        [(ngModel)]="otp" 
+        placeholder="000000"
+        class="otp-input"
+      />
+      <button type="button" class="verify-btn" (click)="verify()" [disabled]="loading()">
+        @if (loading()) { Verifying... } @else { Verify & Enter }
+      </button>
+    </div>
+
+    @if (error()) {
+      <p class="error-msg">{{ error() }}</p>
+    }
+  </section>
+</main>

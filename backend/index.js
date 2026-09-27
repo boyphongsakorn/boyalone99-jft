@@ -3,6 +3,8 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const mysql = require('mysql2/promise');
+const { authenticator } = require('otplib');
+const qrcode = require('qrcode');
 
 const app = express();
 app.use(cors());
@@ -21,6 +23,16 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 
+// Middleware to check Admin Auth
+const checkAdminAuth = (req, res, next) => {
+  const token = req.headers['x-admin-token'];
+  if (token === 'authenticated') {
+    next();
+  } else {
+    res.status(403).json({ error: 'Forbidden: Admin access required' });
+  }
+};
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'BoyAlone99 Backend is running' });
 });
@@ -36,10 +48,40 @@ app.get('/rewards', async (req, res) => {
   }
 });
 
-// ---- Admin APIs (local use, no auth) ----
+// ---- Admin Auth APIs ----
+
+app.get('/admin/auth/qr', async (req, res) => {
+  try {
+    const secret = process.env.ADMIN_2FA_SECRET;
+    if (!secret) return res.status(500).json({ error: '2FA secret not configured' });
+    const otpauth = authenticator.keyuri('BoyAlone99 Admin', 'admin@boyalone99', secret);
+    const qrImageUrl = await qrcode.toDataURL(otpauth);
+    res.json({ qrCode: qrImageUrl });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to generate QR' });
+  }
+});
+
+app.post('/admin/auth/verify', async (req, res) => {
+  try {
+    const { token } = req.body;
+    const secret = process.env.ADMIN_2FA_SECRET;
+    if (!secret) return res.status(500).json({ error: '2FA secret not configured' });
+    const isValid = authenticator.check(token, secret);
+    if (isValid) {
+      res.json({ success: true, adminToken: 'authenticated' });
+    } else {
+      res.status(401).json({ error: 'Invalid OTP token' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: 'Verification failed' });
+  }
+});
+
+// ---- Admin APIs (Protected) ----
 
 // List all users
-app.get('/admin/users', async (req, res) => {
+app.get('/admin/users', checkAdminAuth, async (req, res) => {
   try {
     const [rows] = await pool.query(
       'SELECT id, username, email, avatar, alone_coin, created_at FROM users ORDER BY created_at DESC'
@@ -52,7 +94,7 @@ app.get('/admin/users', async (req, res) => {
 });
 
 // Add coin to user
-app.post('/admin/users/:id/coins', async (req, res) => {
+app.post('/admin/users/:id/coins', checkAdminAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { amount, reason } = req.body;
@@ -76,7 +118,7 @@ app.post('/admin/users/:id/coins', async (req, res) => {
 });
 
 // Create reward
-app.post('/admin/rewards', async (req, res) => {
+app.post('/admin/rewards', checkAdminAuth, async (req, res) => {
   try {
     const { title, description, cost, accent, icon, stock } = req.body;
     if (!title || cost === undefined) return res.status(400).json({ error: 'title and cost required' });
@@ -93,7 +135,7 @@ app.post('/admin/rewards', async (req, res) => {
 });
 
 // Update reward
-app.put('/admin/rewards/:id', async (req, res) => {
+app.put('/admin/rewards/:id', checkAdminAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { title, description, cost, accent, icon, stock } = req.body;
@@ -111,7 +153,7 @@ app.put('/admin/rewards/:id', async (req, res) => {
 });
 
 // Delete reward
-app.delete('/admin/rewards/:id', async (req, res) => {
+app.delete('/admin/rewards/:id', checkAdminAuth, async (req, res) => {
   try {
     const { id } = req.params;
     await pool.query('DELETE FROM rewards WHERE id = ?', [id]);
@@ -123,7 +165,7 @@ app.delete('/admin/rewards/:id', async (req, res) => {
 });
 
 // Redemption history
-app.get('/admin/redemptions', async (req, res) => {
+app.get('/admin/redemptions', checkAdminAuth, async (req, res) => {
   try {
     const [rows] = await pool.query(
       `SELECT h.id, h.redeemed_at, u.username, u.id AS user_id, r.title AS reward_title
@@ -140,7 +182,7 @@ app.get('/admin/redemptions', async (req, res) => {
 });
 
 // Coin history
-app.get('/admin/coin-history', async (req, res) => {
+app.get('/admin/coin-history', checkAdminAuth, async (req, res) => {
   try {
     const [rows] = await pool.query(
       `SELECT h.id, h.amount, h.reason, h.created_at, u.username, u.id AS user_id
