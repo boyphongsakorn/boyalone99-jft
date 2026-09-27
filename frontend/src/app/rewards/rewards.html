@@ -52,7 +52,7 @@
     </div>
 
     <div class="reward-grid">
-      @for (reward of rewards; track reward.title) {
+      @for (reward of rewards(); track reward.title) {
         <article class="reward-card" [class]="reward.accent">
           <div class="reward-art" aria-hidden="true">{{ reward.icon }}</div>
           <div class="reward-content">

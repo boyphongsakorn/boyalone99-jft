@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const mysql = require('mysql2/promise');
 
 const app = express();
 app.use(cors());
@@ -9,11 +10,30 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
-// Mock user database
-const users = {};
+// MySQL Connection Pool
+const pool = mysql.createPool({
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'boyalone99_community',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+});
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'BoyAlone99 Backend is running' });
+});
+
+// Get all rewards from Database
+app.get('/rewards', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM rewards');
+    res.json(rows);
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to fetch rewards' });
+  }
 });
 
 // OAuth Callback Handler
