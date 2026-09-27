@@ -55,10 +55,11 @@ export class Profile implements OnInit {
   protected linkSocial(provider: 'Discord' | 'Twitch' | 'YouTube'): void {
     if (typeof window === 'undefined') return;
     const root = window.location.origin;
-    // Link flow: provider=twitch + link=true + linkUserId=<main id>
+    // Link flow via state (redirect_uri stays static for Twitch)
     const saved = localStorage.getItem('user_profile');
     const mainId = saved ? (JSON.parse(saved).id || '') : '';
-    const redirectUri = `${root}/login/callback?provider=${provider.toLowerCase()}&link=true&linkUserId=${encodeURIComponent(mainId)}`;
+    const redirectUri = `${root}/login/callback`;
+    const state = btoa(JSON.stringify({ provider: provider.toLowerCase(), link: true, linkUserId: mainId }));
     const providerSettings = {
       Discord: {
         clientId: environment.discordClientId,
@@ -85,6 +86,7 @@ export class Profile implements OnInit {
       redirect_uri: redirectUri,
       response_type: 'code',
       scope: settings.scope,
+      state,
     });
     window.location.href = `${settings.endpoint}?${params.toString()}`;
   }

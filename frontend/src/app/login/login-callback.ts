@@ -86,9 +86,19 @@ export class LoginCallback implements OnInit {
   async ngOnInit() {
     const params = this.route.snapshot.queryParamMap;
     const code = params.get('code');
-    const provider = (params.get('provider') || 'discord').toLowerCase();
-    const isLink = params.get('link') === 'true';
-    const linkUserId = params.get('linkUserId') || '';
+    // Twitch returns context in state (redirect_uri must stay static)
+    let provider = (params.get('provider') || 'discord').toLowerCase();
+    let isLink = params.get('link') === 'true';
+    let linkUserId = params.get('linkUserId') || '';
+    const stateRaw = params.get('state');
+    if (stateRaw) {
+      try {
+        const state = JSON.parse(atob(stateRaw));
+        if (state.provider) provider = String(state.provider).toLowerCase();
+        if (state.link === true) isLink = true;
+        if (state.linkUserId) linkUserId = String(state.linkUserId);
+      } catch { /* ignore bad state */ }
+    }
     if (!code) {
       this.error.set('No authorization code received.');
       this.loading.set(false);
@@ -97,8 +107,8 @@ export class LoginCallback implements OnInit {
 
     try {
       if (provider === 'twitch') {
-        // Twitch login or link — backend exchanges code + fetches Helix profile
-        const redirectUri = `${window.location.origin}/login/callback?provider=twitch${isLink ? `&link=true&linkUserId=${encodeURIComponent(linkUserId)}` : ''}`;
+        // Twitch login or link — redirect_uri must match console exactly
+        const redirectUri = `${window.location.origin}/login/callback`;
         const twitchData: any = await this.http.get(
           `${environment.apiUrl}/auth/twitch/callback?code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent(redirectUri)}${isLink && linkUserId ? `&linkUserId=${encodeURIComponent(linkUserId)}` : ''}`
         ).toPromise();

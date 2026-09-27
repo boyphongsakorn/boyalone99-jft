@@ -12,8 +12,9 @@ export class Login {
   protected handleLogin(provider: string): void {
     if (typeof window === 'undefined') return;
     const root = window.location.origin;
-    // Pass provider + redirect_uri in state so callback knows login vs link
-    const redirectUri = `${root}/login/callback?provider=${provider.toLowerCase()}`;
+    // Keep redirect_uri static for Twitch; carry context in state
+    const redirectUri = `${root}/login/callback`;
+    const state = btoa(JSON.stringify({ provider: provider.toLowerCase() }));
     const providerSettings = {
       Discord: {
         clientId: environment.discordClientId,
@@ -42,6 +43,7 @@ export class Login {
       redirect_uri: redirectUri,
       response_type: 'code',
       scope: settings.scope,
+      state,
     });
     window.location.href = `${settings.endpoint}?${params.toString()}`;
   }
