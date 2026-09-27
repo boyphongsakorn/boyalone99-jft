@@ -84,7 +84,11 @@ export class LoginCallback implements OnInit {
   constructor(private route: ActivatedRoute, private http: HttpClient, private router: Router) {}
 
   async ngOnInit() {
-    const code = this.route.snapshot.queryParamMap.get('code');
+    const params = this.route.snapshot.queryParamMap;
+    const code = params.get('code');
+    const provider = (params.get('provider') || 'discord').toLowerCase();
+    const isLink = params.get('link') === 'true';
+    const linkUserId = params.get('linkUserId') || '';
     if (!code) {
       this.error.set('No authorization code received.');
       this.loading.set(false);
@@ -92,19 +96,47 @@ export class LoginCallback implements OnInit {
     }
 
     try {
-      // Call the real backend API to exchange the code for a user profile
-      const userData = await this.http.get<DiscordUser>(
-        `${environment.apiUrl}/auth/discord/callback?code=${code}`
-      ).toPromise();
-      
-      const user = userData as DiscordUser;
-      this.user.set(user);
-      this.userAvatar.set(`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`);
-      
-      // Save to local session for the profile page
-      localStorage.setItem('user_profile', JSON.stringify(user));
+      if (provider === 'twitch') {
+        // Twitch login or link — backend exchanges code + fetches Helix profile
+        const redirectUri = `${window.location.origin}/login/callback?provider=twitch${isLink ? `&link=true&linkUserId=${encodeURIComponent(linkUserId)}` : ''}`;
+        const twitchData: any = await this.http.get(
+          `${environment.apiUrl}/auth/twitch/callback?code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent(redirectUri)}${isLink && linkUserId ? `&linkUserId=${encodeURIComponent(linkUserId)}` : ''}`
+        ).toPromise();
+        if (isLink) {
+          // Link mode: save twitch name, go back to profile
+          if (typeof window !== 'undefined' && twitchData?.twitch_username) {
+            localStorage.setItem('linked_twitch', twitchData.twitch_username);
+          }
+          this.router.navigateByUrl('/profile');
+          return;
+        }
+        const user = {
+          username: twitchData.username,
+          avatar: twitchData.avatar,
+          avatarUrl: twitchData.avatarUrl,
+          id: twitchData.id,
+          email: twitchData.email,
+          provider: 'twitch',
+          twitch_username: twitchData.twitch_username,
+        } as any;
+        this.user.set(user);
+        this.userAvatar.set(twitchData.avatarUrl || 'https://cdn.discordapp.com/embed/avatars/0.png');
+        localStorage.setItem('user_profile', JSON.stringify(user));
+      } else {
+        // Call the real backend API to exchange the code for a user profile
+        const userData = await this.http.get<DiscordUser>(
+          `${environment.apiUrl}/auth/discord/callback?code=${code}`
+        ).toPromise();
+
+        const user = userData as DiscordUser;
+        this.user.set(user);
+        this.userAvatar.set(`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`);
+
+        // Save to local session for the profile page
+        localStorage.setItem('user_profile', JSON.stringify({ ...user, provider: 'discord' }));
+      }
     } catch (e) {
-      this.error.set('Failed to authenticate with Discord.');
+      this.error.set(`Failed to authenticate with ${provider === 'twitch' ? 'Twitch' : 'Discord'}.`);
     } finally {
       this.loading.set(false);
     }

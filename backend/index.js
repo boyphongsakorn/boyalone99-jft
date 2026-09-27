@@ -236,6 +236,67 @@ app.get('/balance/:userId', async (req, res) => {
   }
 });
 
+// OAuth Callback Handler - Twitch (login or link)
+app.get('/auth/twitch/callback', async (req, res) => {
+  const code = req.query.code;
+  if (!code) return res.status(400).json({ error: 'Missing code' });
+  try {
+    const redirectUri = req.query.redirect_uri || process.env.TWITCH_REDIRECT_URI || 'http://localhost:4200/login/callback';
+    const tokenResponse = await axios.post('https://id.twitch.tv/oauth2/token', new URLSearchParams({
+      client_id: process.env.TWITCH_CLIENT_ID,
+      client_secret: process.env.TWITCH_CLIENT_SECRET,
+      code: String(code),
+      grant_type: 'authorization_code',
+      redirect_uri: String(redirectUri),
+    }), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+    const accessToken = tokenResponse.data.access_token;
+    const userResponse = await axios.get('https://api.twitch.tv/helix/users', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Client-Id': process.env.TWITCH_CLIENT_ID,
+      },
+    });
+    const twitchUser = userResponse.data?.data?.[0];
+    if (!twitchUser) return res.status(500).json({ error: 'Failed to fetch Twitch profile' });
+    // If link mode (main user id passed), attach twitch to existing user
+    const linkUserId = req.query.linkUserId ? String(req.query.linkUserId) : null;
+    if (linkUserId) {
+      await pool.query(
+        'UPDATE users SET twitch_id = ?, twitch_username = ? WHERE id = ?',
+        [twitchUser.id, twitchUser.login, linkUserId]
+      );
+      return res.json({
+        id: linkUserId,
+        twitch_id: twitchUser.id,
+        twitch_username: twitchUser.login,
+        linked: true,
+        provider: 'twitch',
+      });
+    }
+    // Login mode: use twitch:ID as primary key
+    const userId = `twitch:${twitchUser.id}`;
+    await pool.query(
+      `INSERT INTO users (id, username, email, avatar, alone_coin, twitch_id, twitch_username)
+       VALUES (?, ?, ?, ?, 0, ?, ?)
+       ON DUPLICATE KEY UPDATE username = VALUES(username), email = VALUES(email), avatar = VALUES(avatar), twitch_id = VALUES(twitch_id), twitch_username = VALUES(twitch_username)`,
+      [userId, twitchUser.display_name || twitchUser.login, twitchUser.email || null, twitchUser.profile_image_url || null, twitchUser.id, twitchUser.login]
+    );
+    res.json({
+      username: twitchUser.display_name || twitchUser.login,
+      avatar: null,
+      avatarUrl: twitchUser.profile_image_url || null,
+      id: userId,
+      email: twitchUser.email || null,
+      provider: 'twitch',
+      twitch_id: twitchUser.id,
+      twitch_username: twitchUser.login,
+    });
+  } catch (error) {
+    console.error('Twitch Auth Error:', error.response?.data || error.message);
+    res.status(500).json({ error: 'Twitch authentication failed' });
+  }
+});
+
 // OAuth Callback Handler
 app.get('/auth/discord/callback', async (req, res) => {
   const code = req.query.code;

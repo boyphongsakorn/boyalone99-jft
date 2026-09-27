@@ -10,8 +10,10 @@ import { environment } from '../../environments/environment';
 })
 export class Login {
   protected handleLogin(provider: string): void {
+    if (typeof window === 'undefined') return;
     const root = window.location.origin;
-    const redirectUri = `${root}/login/callback`;
+    // Pass provider + redirect_uri in state so callback knows login vs link
+    const redirectUri = `${root}/login/callback?provider=${provider.toLowerCase()}`;
     const providerSettings = {
       Discord: {
         clientId: environment.discordClientId,

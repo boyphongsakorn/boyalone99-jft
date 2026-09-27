@@ -55,7 +55,10 @@ export class Profile implements OnInit {
   protected linkSocial(provider: 'Discord' | 'Twitch' | 'YouTube'): void {
     if (typeof window === 'undefined') return;
     const root = window.location.origin;
-    const redirectUri = `${root}/login/callback?link=${provider.toLowerCase()}`;
+    // Link flow: provider=twitch + link=true + linkUserId=<main id>
+    const saved = localStorage.getItem('user_profile');
+    const mainId = saved ? (JSON.parse(saved).id || '') : '';
+    const redirectUri = `${root}/login/callback?provider=${provider.toLowerCase()}&link=true&linkUserId=${encodeURIComponent(mainId)}`;
     const providerSettings = {
       Discord: {
         clientId: environment.discordClientId,

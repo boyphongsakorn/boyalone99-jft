@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255),
     avatar VARCHAR(255),
     alone_coin INT DEFAULT 0,
+    twitch_id VARCHAR(255) NULL,
+    twitch_username VARCHAR(255) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
