@@ -72,5 +72,58 @@
         <span class="saved-pill">Changes saved!</span>
       }
     </div>
+
+    <div class="social-section">
+      <h2>Linked accounts</h2>
+      <p class="social-hint">Link another social to your main account</p>
+      <div class="social-grid">
+        <div class="social-row discord">
+          <span class="social-icon" aria-hidden="true">◈</span>
+          <span class="social-info">
+            <b>Discord</b>
+            @if (linkedDiscord(); as name) {
+              <small>✓ {{ name }}</small>
+            } @else {
+              <small>Not linked</small>
+            }
+          </span>
+          @if (!linkedDiscord()) {
+            <button type="button" (click)="linkSocial('Discord')">Link</button>
+          }
+        </div>
+        <div class="social-row twitch">
+          <span class="social-icon" aria-hidden="true">▶</span>
+          <span class="social-info">
+            <b>Twitch</b>
+            @if (linkedTwitch(); as name) {
+              <small>✓ {{ name }}</small>
+            } @else {
+              <small>Not linked</small>
+            }
+          </span>
+          @if (linkedTwitch()) {
+            <button type="button" class="unlink" (click)="unlinkSocial('twitch')">Unlink</button>
+          } @else {
+            <button type="button" (click)="linkSocial('Twitch')">Link</button>
+          }
+        </div>
+        <div class="social-row youtube">
+          <span class="social-icon" aria-hidden="true">●</span>
+          <span class="social-info">
+            <b>YouTube</b>
+            @if (linkedYoutube(); as name) {
+              <small>✓ {{ name }}</small>
+            } @else {
+              <small>Not linked</small>
+            }
+          </span>
+          @if (linkedYoutube()) {
+            <button type="button" class="unlink" (click)="unlinkSocial('youtube')">Unlink</button>
+          } @else {
+            <button type="button" (click)="linkSocial('YouTube')">Link</button>
+          }
+        </div>
+      </div>
+    </div>
   </section>
 </main>

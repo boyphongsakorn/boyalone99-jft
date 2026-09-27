@@ -17,6 +17,9 @@ export class Profile implements OnInit {
   protected userAvatar = signal('https://cdn.discordapp.com/embed/avatars/0.png');
   protected isEditing = signal(false);
   protected saveStatus = signal<'idle' | 'saving' | 'saved'>('idle');
+  protected linkedDiscord = signal<string | null>(null);
+  protected linkedTwitch = signal<string | null>(null);
+  protected linkedYoutube = signal<string | null>(null);
 
   constructor(private http: HttpClient, private router: Router) {}
 
@@ -33,9 +36,64 @@ export class Profile implements OnInit {
         if (parsed.avatar) {
           this.userAvatar.set(`https://cdn.discordapp.com/avatars/${parsed.id}/${parsed.avatar}.png`);
         }
+        if (parsed.provider === 'discord' || parsed.id) {
+          this.linkedDiscord.set(parsed.username || 'Linked');
+        }
+        if (parsed.linkedTwitch) this.linkedTwitch.set(parsed.linkedTwitch);
+        if (parsed.linkedYoutube) this.linkedYoutube.set(parsed.linkedYoutube);
+        // Check separate linked socials
+        const twitch = localStorage.getItem('linked_twitch');
+        if (twitch) this.linkedTwitch.set(twitch);
+        const youtube = localStorage.getItem('linked_youtube');
+        if (youtube) this.linkedYoutube.set(youtube);
       } catch (e) {
         console.error('Failed to parse saved profile', e);
       }
+    }
+  }
+
+  protected linkSocial(provider: 'Discord' | 'Twitch' | 'YouTube'): void {
+    if (typeof window === 'undefined') return;
+    const root = window.location.origin;
+    const redirectUri = `${root}/login/callback?link=${provider.toLowerCase()}`;
+    const providerSettings = {
+      Discord: {
+        clientId: environment.discordClientId,
+        endpoint: 'https://discord.com/api/oauth2/authorize',
+        scope: 'identify email',
+      },
+      Twitch: {
+        clientId: environment.twitchClientId,
+        endpoint: 'https://id.twitch.tv/oauth2/authorize',
+        scope: 'user:read:email',
+      },
+      YouTube: {
+        clientId: environment.youtubeClientId,
+        endpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
+        scope: 'openid email profile',
+      },
+    } as const;
+    const settings = providerSettings[provider];
+    if (!settings || settings.clientId.startsWith('YOUR_')) {
+      return;
+    }
+    const params = new URLSearchParams({
+      client_id: settings.clientId,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: settings.scope,
+    });
+    window.location.href = `${settings.endpoint}?${params.toString()}`;
+  }
+
+  protected unlinkSocial(provider: 'twitch' | 'youtube'): void {
+    if (typeof window === 'undefined') return;
+    if (provider === 'twitch') {
+      localStorage.removeItem('linked_twitch');
+      this.linkedTwitch.set(null);
+    } else {
+      localStorage.removeItem('linked_youtube');
+      this.linkedYoutube.set(null);
     }
   }
 

@@ -120,6 +120,25 @@
   padding: 4px 12px; 
 }
 
+.social-section { border-top: 2px dashed var(--line); margin-top: 32px; padding-top: 24px; }
+.social-section h2 { font-size: 1.1rem; margin: 0; transform: rotate(-1deg); }
+.social-hint { color: var(--muted); font-size: .75rem; margin: 6px 0 16px; }
+.social-grid { display: grid; gap: 10px; }
+.social-row { align-items: center; background: #fff; border: 2px solid var(--ink); border-radius: 4px 8px 4px 6px; display: flex; gap: 12px; padding: 10px 12px; }
+.social-row:nth-child(odd) { transform: rotate(-.4deg); }
+.social-row:nth-child(even) { transform: rotate(.4deg); }
+.social-icon { align-items: center; border: 2px solid var(--ink); border-radius: 50%; display: flex; flex: 0 0 36px; font-size: 1rem; height: 36px; justify-content: center; width: 36px; }
+.social-row.discord .social-icon { background: #e9e0f0; }
+.social-row.twitch .social-icon { background: #dbe6e2; }
+.social-row.youtube .social-icon { background: #f3d8cd; }
+.social-info { display: grid; flex: 1; }
+.social-info b { font-size: .9rem; }
+.social-info small { color: var(--muted); font-size: .72rem; }
+.social-row button { background: var(--ink); border: 2px solid var(--ink); border-radius: 4px 8px 4px 6px; color: var(--paper); cursor: pointer; font: 700 .75rem inherit; padding: 6px 14px; }
+.social-row button:hover { background: var(--coral); border-color: var(--coral); }
+.social-row button.unlink { background: transparent; border-color: var(--coral); color: var(--coral); }
+.social-row button.unlink:hover { background: var(--coral); color: #fff; }
+
 @keyframes rise-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (max-width: 600px) {
