@@ -75,18 +75,20 @@ app.get('/auth/discord/callback', async (req, res) => {
 
     const discordUser = userResponse.data;
 
-    // 3. Mock DB: Save/Update user
-    users[discordUser.id] = {
-      username: discordUser.username,
-      avatar: discordUser.avatar,
-      email: discordUser.email,
-    };
+    // 3. Save/Update user in MySQL
+    await pool.query(
+      `INSERT INTO users (id, username, email, avatar, alone_coin)
+       VALUES (?, ?, ?, ?, 0)
+       ON DUPLICATE KEY UPDATE username = VALUES(username), email = VALUES(email), avatar = VALUES(avatar)`,
+      [discordUser.id, discordUser.username, discordUser.email || null, discordUser.avatar || null]
+    );
 
     // 4. Send profile back to frontend
-    res.json({ 
-      username: discordUser.username, 
-      avatar: discordUser.avatar, 
-      id: discordUser.id 
+    res.json({
+      username: discordUser.username,
+      avatar: discordUser.avatar,
+      id: discordUser.id,
+      email: discordUser.email || null,
     });
   } catch (error) {
     console.error('Discord Auth Error:', error.response?.data || error.message);
