@@ -58,6 +58,7 @@ app.get('/admin/auth/qr', async (req, res) => {
     const qrImageUrl = await qrcode.toDataURL(otpauth);
     res.json({ qrCode: qrImageUrl });
   } catch (error) {
+    console.error('QR Generation Error:', error);
     res.status(500).json({ error: 'Failed to generate QR' });
   }
 });
