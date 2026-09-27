@@ -40,11 +40,11 @@ app.get('/rewards', async (req, res) => {
 app.get('/balance/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const [rows] = await pool.query('SELECT balance FROM users WHERE discord_id = ?', [userId]);
+    const [rows] = await pool.query('SELECT alone_coin FROM users WHERE id = ?', [userId]);
     if (rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
-    res.json({ balance: rows[0].balance });
+    res.json({ balance: rows[0].alone_coin });
   } catch (error) {
     console.error('Database Error:', error);
     res.status(500).json({ error: 'Failed to fetch balance' });
