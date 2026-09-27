@@ -25,6 +25,7 @@ export class Rewards implements OnInit {
   protected readonly notice = signal<string | null>(null);
   protected readonly rewards = signal<readonly Reward[]>([]);
   protected readonly loading = signal(true);
+  protected readonly claimEnabled = signal(false);
 
   constructor(private http: HttpClient, private router: Router) {
     if (typeof window !== 'undefined') {
@@ -38,10 +39,14 @@ export class Rewards implements OnInit {
   async ngOnInit() {
     this.loading.set(true);
     try {
-      const data = await this.http.get<Reward[]>(`${environment.apiUrl}/rewards`).toPromise();
+      const [data, settings] = await Promise.all([
+        this.http.get<Reward[]>(`${environment.apiUrl}/rewards`).toPromise(),
+        this.http.get<{ claim_enabled: boolean }>(`${environment.apiUrl}/settings`).toPromise(),
+      ]);
       if (data) {
         this.rewards.set(data);
       }
+      this.claimEnabled.set(settings?.claim_enabled === true);
     } catch (e) {
       console.error('Failed to fetch rewards', e);
       this.notice.set('โหลดของรางวัลไม่สำเร็จ ลองรีเฟรชอีกครั้ง');
@@ -71,10 +76,14 @@ export class Rewards implements OnInit {
   }
 
   protected canRedeem(cost: number): boolean {
-    return this.isLoggedIn() && this.balance() >= cost;
+    return this.claimEnabled() && this.isLoggedIn() && this.balance() >= cost;
   }
 
   protected redeem(reward: Reward): void {
+    if (!this.claimEnabled()) {
+      this.notice.set('ตอนนี้ปิดระบบแลกของรางวัลชั่วคราว');
+      return;
+    }
     if (!this.isLoggedIn()) {
       return;
     }

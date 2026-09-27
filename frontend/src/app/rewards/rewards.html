@@ -68,8 +68,10 @@
           </div>
           <div class="reward-action">
             <span class="cost"><b>{{ reward.cost | number }}</b> AC</span>
-            <button type="button" [disabled]="!isLoggedIn() || reward.stock <= 0" (click)="redeem(reward)">
-              @if (isLoggedIn()) {
+            <button type="button" [disabled]="!claimEnabled() || !isLoggedIn() || reward.stock <= 0" (click)="redeem(reward)">
+              @if (!claimEnabled()) {
+                Disabled
+              } @else if (isLoggedIn()) {
                 Redeem <span aria-hidden="true">↗</span>
               } @else {
                 Login to redeem
