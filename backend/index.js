@@ -36,6 +36,21 @@ app.get('/rewards', async (req, res) => {
   }
 });
 
+// Get user balance
+app.get('/balance/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const [rows] = await pool.query('SELECT balance FROM users WHERE discord_id = ?', [userId]);
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json({ balance: rows[0].balance });
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to fetch balance' });
+  }
+});
+
 // OAuth Callback Handler
 app.get('/auth/discord/callback', async (req, res) => {
   const code = req.query.code;

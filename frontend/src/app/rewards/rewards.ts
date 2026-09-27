@@ -43,6 +43,24 @@ export class Rewards implements OnInit {
     } catch (e) {
       console.error('Failed to fetch rewards', e);
     }
+
+    await this.fetchBalance();
+  }
+
+  async fetchBalance() {
+    if (typeof window === 'undefined') return;
+    const user = localStorage.getItem('user_profile');
+    if (!user) return;
+
+    try {
+      const parsed = JSON.parse(user);
+      const response: any = await this.http.get(`${environment.apiUrl}/balance/${parsed.id}`).toPromise();
+      if (response && typeof response.balance === 'number') {
+        this.balance.set(response.balance);
+      }
+    } catch (e) {
+      console.error('Failed to fetch balance', e);
+    }
   }
 
   protected canRedeem(cost: number): boolean {
