@@ -91,9 +91,18 @@ export class Profile implements OnInit {
     window.location.href = `${settings.endpoint}?${params.toString()}`;
   }
 
-  protected unlinkSocial(provider: 'twitch' | 'youtube'): void {
+  protected async unlinkSocial(provider: 'twitch' | 'youtube'): Promise<void> {
     if (typeof window === 'undefined') return;
     if (provider === 'twitch') {
+      const saved = localStorage.getItem('user_profile');
+      const userId = saved ? (JSON.parse(saved).id || '') : '';
+      try {
+        if (userId) {
+          await this.http.delete(`${environment.apiUrl}/auth/twitch/link?userId=${encodeURIComponent(userId)}`).toPromise();
+        }
+      } catch (e) {
+        console.error('Failed to unlink Twitch', e);
+      }
       localStorage.removeItem('linked_twitch');
       this.linkedTwitch.set(null);
     } else {

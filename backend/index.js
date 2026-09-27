@@ -297,6 +297,19 @@ app.get('/auth/twitch/callback', async (req, res) => {
   }
 });
 
+// Unlink Twitch from main account
+app.delete('/auth/twitch/link', async (req, res) => {
+  try {
+    const userId = req.query.userId ? String(req.query.userId) : null;
+    if (!userId) return res.status(400).json({ error: 'Missing userId' });
+    await pool.query('UPDATE users SET twitch_id = NULL, twitch_username = NULL WHERE id = ?', [userId]);
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('Twitch Unlink Error:', error.message);
+    res.status(500).json({ error: 'Failed to unlink Twitch' });
+  }
+});
+
 // OAuth Callback Handler
 app.get('/auth/discord/callback', async (req, res) => {
   const code = req.query.code;
