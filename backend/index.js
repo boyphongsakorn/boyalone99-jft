@@ -80,13 +80,15 @@ app.post('/admin/auth/verify', async (req, res) => {
     const { token } = req.body;
     const secret = process.env.ADMIN_2FA_SECRET;
     if (!secret) return res.status(500).json({ error: '2FA secret not configured' });
-    const isValid = otplib.authenticator.check(token, secret);
+    // const isValid = otplib.authenticator.check(token, secret);
+    const isValid = await verify({ secret, token });
     if (isValid) {
       res.json({ success: true, adminToken: 'authenticated' });
     } else {
       res.status(401).json({ error: 'Invalid OTP token' });
     }
   } catch (error) {
+    console.error('Verification Error:', error);
     res.status(500).json({ error: 'Verification failed' });
   }
 });
