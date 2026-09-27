@@ -48,13 +48,25 @@ app.get('/rewards', async (req, res) => {
   }
 });
 
-// ---- Admin Auth APIs ----
+app.get('/admin/auth/status', async (req, res) => {
+  const secret = process.env.ADMIN_2FA_SECRET;
+  if (secret) {
+    res.json({ hasSecret: true });
+  } else {
+    res.json({ hasSecret: false });
+  }
+});
 
 app.get('/admin/auth/qr', async (req, res) => {
   try {
     const secret = process.env.ADMIN_2FA_SECRET;
     if (!secret) return res.status(500).json({ error: '2FA secret not configured' });
-    const otpauth = otplib.authenticator.keyuri('BoyAlone99 Admin', 'admin@boyalone99', secret);
+    // const otpauth = otplib.authenticator.keyuri('BoyAlone99 Admin', 'admin@boyalone99', secret);
+    const otpauth = otplib.generateURI({
+        issuer: "BoyAlone99 Admin",
+        label: "admin@boyalone99",
+        secret,
+    });
     const qrImageUrl = await qrcode.toDataURL(otpauth);
     res.json({ qrCode: qrImageUrl });
   } catch (error) {

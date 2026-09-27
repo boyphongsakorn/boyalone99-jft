@@ -22,12 +22,17 @@ export class AdminAuth implements OnInit {
 
   async ngOnInit() {
     try {
+      const statusRes: any = await this.http.get(`${environment.apiUrl}/admin/auth/status`).toPromise();
+      if (statusRes && statusRes.hasSecret) {
+        this.qrCode.set(null);
+        return;
+      }
       const res: any = await this.http.get(`${environment.apiUrl}/admin/auth/qr`).toPromise();
       if (res && res.qrCode) {
         this.qrCode.set(res.qrCode);
       }
     } catch (e) {
-      this.error.set('Failed to load QR code');
+      this.error.set('Failed to initialize auth');
     }
   }
 
