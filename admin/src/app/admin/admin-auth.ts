@@ -21,6 +21,10 @@ export class AdminAuth implements OnInit {
   constructor(private http: HttpClient, private router: Router) {}
 
   async ngOnInit() {
+    if (typeof window !== 'undefined' && localStorage.getItem('admin_token')) {
+      this.router.navigateByUrl('/');
+      return;
+    }
     try {
       const statusRes: any = await this.http.get(`${environment.apiUrl}/admin/auth/status`).toPromise();
       if (statusRes && statusRes.hasSecret) {

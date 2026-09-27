@@ -50,6 +50,9 @@ export class Admin implements OnInit {
   constructor(private http: HttpClient) {}
 
   async ngOnInit() {
+    if (typeof window !== 'undefined' && !localStorage.getItem('admin_token')) {
+      return;
+    }
     await this.refreshAll();
   }
 
