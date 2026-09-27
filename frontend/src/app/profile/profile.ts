@@ -23,16 +23,19 @@ export class Profile implements OnInit {
   async ngOnInit() {
     if (typeof window === 'undefined') return;
 
-    try {
-      // In a real app, you would send a JWT token to authenticate
-      const response: any = await this.http.get(`${environment.apiUrl}/profile`).toPromise();
-      if (response) {
-        this.email.set(response.email || 'user@example.com');
-        this.epicUsername.set(response.username || 'EpicPlayer123');
-        this.userAvatar.set(response.avatarUrl);
+    // Try to load profile from local session first
+    const savedUser = localStorage.getItem('user_profile');
+    if (savedUser) {
+      try {
+        const parsed = JSON.parse(savedUser);
+        this.email.set(parsed.email || 'user@example.com');
+        this.epicUsername.set(parsed.username || 'EpicPlayer123');
+        if (parsed.avatar) {
+          this.userAvatar.set(`https://cdn.discordapp.com/avatars/${parsed.id}/${parsed.avatar}.png`);
+        }
+      } catch (e) {
+        console.error('Failed to parse saved profile', e);
       }
-    } catch (e) {
-      console.error('Failed to fetch profile', e);
     }
   }
 
