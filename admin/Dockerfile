@@ -5,7 +5,7 @@
 # NOTE: if backend also runs in Docker, run with --network host or
 # -e BACKEND_URL and rebuild, or use docker-compose below.
 
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@latest --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -13,7 +13,7 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm run build
 
-FROM node:20-alpine
+FROM node:24-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=4001
