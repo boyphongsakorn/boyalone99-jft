@@ -26,9 +26,11 @@ export class Rewards implements OnInit {
   protected readonly rewards = signal<readonly Reward[]>([]);
 
   constructor(private http: HttpClient) {
-    const user = localStorage.getItem('user_profile');
-    if (user) {
-      this.isLoggedIn.set(true);
+    if (typeof window !== 'undefined') {
+      const user = localStorage.getItem('user_profile');
+      if (user) {
+        this.isLoggedIn.set(true);
+      }
     }
   }
 

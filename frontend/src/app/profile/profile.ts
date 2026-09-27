@@ -21,6 +21,8 @@ export class Profile implements OnInit {
   constructor(private http: HttpClient) {}
 
   async ngOnInit() {
+    if (typeof window === 'undefined') return;
+
     try {
       // In a real app, you would send a JWT token to authenticate
       const response: any = await this.http.get(`${environment.apiUrl}/profile`).toPromise();
