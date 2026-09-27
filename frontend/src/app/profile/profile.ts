@@ -1,6 +1,6 @@
 import { Component, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { RouterLink, Router } from '@angular/router';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 
@@ -18,7 +18,7 @@ export class Profile implements OnInit {
   protected isEditing = signal(false);
   protected saveStatus = signal<'idle' | 'saving' | 'saved'>('idle');
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private router: Router) {}
 
   async ngOnInit() {
     if (typeof window === 'undefined') return;
@@ -55,5 +55,12 @@ export class Profile implements OnInit {
       this.isEditing.set(false);
       setTimeout(() => this.saveStatus.set('idle'), 3000);
     }, 1000);
+  }
+
+  protected logout(): void {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('user_profile');
+    }
+    this.router.navigateByUrl('/');
   }
 }

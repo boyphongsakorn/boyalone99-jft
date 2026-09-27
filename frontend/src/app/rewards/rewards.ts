@@ -1,6 +1,6 @@
 import { Component, signal, OnInit } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { RouterLink, Router } from '@angular/router';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 
@@ -25,7 +25,7 @@ export class Rewards implements OnInit {
   protected readonly notice = signal<string | null>(null);
   protected readonly rewards = signal<readonly Reward[]>([]);
 
-  constructor(private http: HttpClient) {
+  constructor(private http: HttpClient, private router: Router) {
     if (typeof window !== 'undefined') {
       const user = localStorage.getItem('user_profile');
       if (user) {
@@ -79,5 +79,13 @@ export class Rewards implements OnInit {
 
     this.balance.update((current) => current - reward.cost);
     this.notice.set(`แลกรางวัล ${reward.title} สำเร็จแล้ว`);
+  }
+
+  protected logout(): void {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('user_profile');
+    }
+    this.isLoggedIn.set(false);
+    this.router.navigateByUrl('/login');
   }
 }

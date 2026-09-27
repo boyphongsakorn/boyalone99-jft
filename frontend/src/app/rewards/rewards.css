@@ -42,6 +42,17 @@
   border-bottom: 1px dashed var(--ink);
 }
 .profile-link:hover, .login-link:hover { color: var(--coral); border-color: var(--coral); }
+.logout-btn {
+  background: transparent;
+  border: 2px solid var(--ink);
+  border-radius: 4px 8px 4px 6px;
+  color: var(--ink);
+  cursor: pointer;
+  font: 700 0.72rem 'Playpen Sans Thai', cursive;
+  padding: 4px 12px;
+  transform: rotate(1deg);
+}
+.logout-btn:hover { background: var(--ink); color: var(--paper); }
 .brand { align-items: center; color: var(--ink); display: flex; font-size: 1rem; font-weight: 700; gap: 10px; line-height: 1; text-decoration: none; transform: rotate(-2deg); }
 .brand small { color: var(--teal); display: block; font-size: 0.65rem; letter-spacing: 0.12em; margin-top: 6px; }
 .brand-mark { display: flex; gap: 3px; height: 23px; transform: skew(-18deg); width: 26px; }

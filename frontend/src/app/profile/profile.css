@@ -32,6 +32,9 @@
 .paper-line { border: 2px solid rgba(37, 37, 37, .08); border-radius: 50%; height: 600px; position: absolute; left: -300px; top: 100px; transform: rotate(-10deg); width: 600px; }
 
 .site-header { align-items: center; display: flex; justify-content: space-between; margin-inline: auto; max-width: 920px; position: relative; z-index: 1; }
+.header-right { align-items: center; display: flex; gap: 12px; }
+.logout-btn { background: transparent; border: 2px solid var(--ink); border-radius: 4px 8px 4px 6px; color: var(--ink); cursor: pointer; font: 700 .72rem 'Playpen Sans Thai', cursive; padding: 4px 12px; transform: rotate(1deg); }
+.logout-btn:hover { background: var(--ink); color: var(--paper); }
 .brand { align-items: center; color: var(--ink); display: flex; font-size: 1rem; font-weight: 700; gap: 10px; line-height: 1; text-decoration: none; transform: rotate(-2deg); }
 .brand small { color: var(--teal); display: block; font-size: .65rem; letter-spacing: .12em; margin-top: 6px; }
 .brand-mark { display: flex; gap: 3px; height: 23px; transform: skew(-18deg); width: 26px; }

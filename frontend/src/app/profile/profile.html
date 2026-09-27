@@ -6,7 +6,10 @@
       <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
       <span>BoyAlone99 <small>Community</small></span>
     </a>
-    <a class="back-link" routerLink="/">&#8592; Rewards</a>
+    <div class="header-right">
+      <a class="back-link" routerLink="/">&#8592; Rewards</a>
+      <button type="button" class="logout-btn" (click)="logout()">Logout</button>
+    </div>
   </header>
 
   <section class="profile-panel" aria-labelledby="profile-title">
