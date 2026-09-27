@@ -1,6 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { HttpClient, HttpClientModule, HttpInterceptorFn, withInterceptors } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 
@@ -47,7 +48,7 @@ export class Admin implements OnInit {
   protected coinAmount: Record<string, number> = {};
   protected coinReason: Record<string, string> = {};
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private router: Router) {}
 
   async ngOnInit() {
     if (typeof window !== 'undefined' && !localStorage.getItem('admin_token')) {
@@ -62,6 +63,13 @@ export class Admin implements OnInit {
 
   protected setTab(t: 'rewards' | 'users' | 'history') {
     this.tab.set(t);
+  }
+
+  protected logout(): void {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('admin_token');
+    }
+    this.router.navigateByUrl('/auth');
   }
 
   async refreshAll() {
