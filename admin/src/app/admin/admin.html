@@ -1,0 +1,150 @@
+<main class="admin-page">
+  <header class="site-header">
+    <a class="brand" href="/">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span>BoyAlone99 <small>Admin · local</small></span>
+    </a>
+    <div class="header-right">
+      <span class="header-note">admin / local only</span>
+      <button type="button" class="refresh-btn" (click)="refreshAll()" [disabled]="loading()">↻ Refresh</button>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div>
+      <p class="eyebrow">หลังบ้าน — จัดการรางวัล & เหรียญ</p>
+      <h1>Admin <em>dashboard.</em></h1>
+      <p class="hero-copy">เพิ่ม / แก้ไข / ลบ reward · เติม Alone Coin ให้ user · ดูรายชื่อ user และประวัติทั้งหมด</p>
+    </div>
+    <nav class="tabs" aria-label="Admin sections">
+      <button type="button" [class.active]="tab() === 'rewards'" (click)="setTab('rewards')">Rewards</button>
+      <button type="button" [class.active]="tab() === 'users'" (click)="setTab('users')">Users ({{ users().length }})</button>
+      <button type="button" [class.active]="tab() === 'history'" (click)="setTab('history')">History</button>
+    </nav>
+  </section>
+
+  @if (notice(); as msg) {
+    <p class="notice" role="status">{{ msg }}</p>
+  }
+
+  @if (loading()) {
+    <p class="notice">Loading…</p>
+  }
+
+  @if (tab() === 'rewards') {
+    <section class="panel-grid">
+      <div class="card form-card">
+        <h2>{{ editingId() === null ? 'Add reward' : 'Edit reward #' + editingId() }}</h2>
+        <label>Title<input [(ngModel)]="form.title" placeholder="Reward title" /></label>
+        <label>Description<textarea [(ngModel)]="form.description" rows="3" placeholder="Description"></textarea></label>
+        <div class="row2">
+          <label>Cost (AC)<input type="number" [(ngModel)]="form.cost" /></label>
+          <label>Stock<input type="number" [(ngModel)]="form.stock" /></label>
+        </div>
+        <div class="row2">
+          <label>Accent
+            <select [(ngModel)]="form.accent">
+              <option value="peach">peach</option>
+              <option value="mint">mint</option>
+              <option value="lilac">lilac</option>
+              <option value="gold">gold</option>
+            </select>
+          </label>
+          <label>Icon<input [(ngModel)]="form.icon" placeholder="✦" /></label>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="primary" (click)="saveReward()">{{ editingId() === null ? 'Add' : 'Save' }}</button>
+          @if (editingId() !== null) {
+            <button type="button" (click)="startCreate()">Cancel</button>
+          }
+        </div>
+      </div>
+
+      <div class="card list-card">
+        <h2>All rewards ({{ rewards().length }})</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Title</th><th>Cost</th><th>Stock</th><th></th></tr></thead>
+            <tbody>
+              @for (r of rewards(); track r.id) {
+                <tr>
+                  <td>{{ r.id }}</td>
+                  <td><b>{{ r.title }}</b><br /><small>{{ r.description }}</small></td>
+                  <td>{{ r.cost }} AC</td>
+                  <td>{{ r.stock }}</td>
+                  <td class="actions">
+                    <button type="button" (click)="startEdit(r)">Edit</button>
+                    <button type="button" class="danger" (click)="deleteReward(r.id)">Delete</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  }
+
+  @if (tab() === 'users') {
+    <section class="card">
+      <h2>All users ({{ users().length }})</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>User</th><th>Email</th><th>Alone Coin</th><th>Add coin</th></tr></thead>
+          <tbody>
+            @for (u of users(); track u.id) {
+              <tr>
+                <td><b>{{ u.username }}</b><br /><small>{{ u.id }}</small></td>
+                <td>{{ u.email || '-' }}</td>
+                <td><b>{{ u.alone_coin }}</b> AC</td>
+                <td>
+                  <div class="coin-form">
+                    <input type="number" [(ngModel)]="coinAmount[u.id]" placeholder="+100" />
+                    <input [(ngModel)]="coinReason[u.id]" placeholder="reason" />
+                    <button type="button" class="primary" (click)="addCoins(u)">Give</button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+
+  @if (tab() === 'history') {
+    <section class="panel-grid">
+      <div class="card">
+        <h2>Redemptions ({{ redemptions().length }})</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>When</th><th>User</th><th>Reward</th></tr></thead>
+            <tbody>
+              @for (h of redemptions(); track h.id) {
+                <tr><td>{{ h.redeemed_at }}</td><td>{{ h.username }}<br /><small>{{ h.user_id }}</small></td><td>{{ h.reward_title }}</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Coin history ({{ coinHistory().length }})</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>When</th><th>User</th><th>Amount</th><th>Reason</th></tr></thead>
+            <tbody>
+              @for (h of coinHistory(); track h.id) {
+                <tr><td>{{ h.created_at }}</td><td>{{ h.username }}</td><td>{{ h.amount }}</td><td>{{ h.reason }}</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  }
+
+  <footer class="page-footer">
+    <span>Local admin — do not expose publicly.</span>
+    <span>API: {{ 'admin/*' }}</span>
+  </footer>
+</main>

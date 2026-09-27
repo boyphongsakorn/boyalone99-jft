@@ -36,6 +36,125 @@ app.get('/rewards', async (req, res) => {
   }
 });
 
+// ---- Admin APIs (local use, no auth) ----
+
+// List all users
+app.get('/admin/users', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      'SELECT id, username, email, avatar, alone_coin, created_at FROM users ORDER BY created_at DESC'
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+// Add coin to user
+app.post('/admin/users/:id/coins', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { amount, reason } = req.body;
+    const coins = Number(amount);
+    if (!Number.isInteger(coins) || coins === 0) {
+      return res.status(400).json({ error: 'amount must be a non-zero integer' });
+    }
+    await pool.query('UPDATE users SET alone_coin = alone_coin + ? WHERE id = ?', [coins, id]);
+    await pool.query('INSERT INTO coin_history (user_id, amount, reason) VALUES (?, ?, ?)', [
+      id,
+      coins,
+      reason || 'admin adjustment',
+    ]);
+    const [rows] = await pool.query('SELECT alone_coin FROM users WHERE id = ?', [id]);
+    if (rows.length === 0) return res.status(404).json({ error: 'User not found' });
+    res.json({ balance: rows[0].alone_coin });
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to add coins' });
+  }
+});
+
+// Create reward
+app.post('/admin/rewards', async (req, res) => {
+  try {
+    const { title, description, cost, accent, icon, stock } = req.body;
+    if (!title || cost === undefined) return res.status(400).json({ error: 'title and cost required' });
+    const [result] = await pool.query(
+      'INSERT INTO rewards (title, description, cost, accent, icon, stock) VALUES (?, ?, ?, ?, ?, ?)',
+      [title, description || '', Number(cost) || 0, accent || 'peach', icon || '✦', Number(stock) || 0]
+    );
+    const [rows] = await pool.query('SELECT * FROM rewards WHERE id = ?', [result.insertId]);
+    res.status(201).json(rows[0]);
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to create reward' });
+  }
+});
+
+// Update reward
+app.put('/admin/rewards/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, cost, accent, icon, stock } = req.body;
+    await pool.query(
+      'UPDATE rewards SET title = ?, description = ?, cost = ?, accent = ?, icon = ?, stock = ? WHERE id = ?',
+      [title, description || '', Number(cost) || 0, accent || 'peach', icon || '✦', Number(stock) || 0, id]
+    );
+    const [rows] = await pool.query('SELECT * FROM rewards WHERE id = ?', [id]);
+    if (rows.length === 0) return res.status(404).json({ error: 'Reward not found' });
+    res.json(rows[0]);
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to update reward' });
+  }
+});
+
+// Delete reward
+app.delete('/admin/rewards/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM rewards WHERE id = ?', [id]);
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to delete reward' });
+  }
+});
+
+// Redemption history
+app.get('/admin/redemptions', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT h.id, h.redeemed_at, u.username, u.id AS user_id, r.title AS reward_title
+       FROM redemption_history h
+       LEFT JOIN users u ON u.id = h.user_id
+       LEFT JOIN rewards r ON r.id = h.reward_id
+       ORDER BY h.redeemed_at DESC LIMIT 100`
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to fetch redemptions' });
+  }
+});
+
+// Coin history
+app.get('/admin/coin-history', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT h.id, h.amount, h.reason, h.created_at, u.username, u.id AS user_id
+       FROM coin_history h
+       LEFT JOIN users u ON u.id = h.user_id
+       ORDER BY h.created_at DESC LIMIT 100`
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to fetch coin history' });
+  }
+});
+
 // Get user balance
 app.get('/balance/:userId', async (req, res) => {
   try {

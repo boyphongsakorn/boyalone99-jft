@@ -1,0 +1,42 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "3000:3000"
+    env_file: ./backend/.env
+    environment:
+      DB_HOST: db
+      DB_NAME: ${DB_NAME:-boyalone99_community}
+      DB_USER: ${DB_USER:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-example}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mysql:8
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-boyalone99_community}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-example}
+    ports:
+      - "3306:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+      - ./backend/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  admin:
+    build: ./admin
+    ports:
+      - "4001:4001"
+    environment:
+      PORT: 4001
+    depends_on:
+      - backend
+
+volumes:
+  db-data:
