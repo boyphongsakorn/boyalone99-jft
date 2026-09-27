@@ -21,6 +21,7 @@
       <button type="button" [class.active]="tab() === 'rewards'" (click)="setTab('rewards')">Rewards</button>
       <button type="button" [class.active]="tab() === 'users'" (click)="setTab('users')">Users ({{ users().length }})</button>
       <button type="button" [class.active]="tab() === 'history'" (click)="setTab('history')">History</button>
+      <button type="button" [class.active]="tab() === 'settings'" (click)="setTab('settings')">Settings</button>
     </nav>
   </section>
 
@@ -140,6 +141,21 @@
             </tbody>
           </table>
         </div>
+      </div>
+    </section>
+  }
+
+  @if (tab() === 'settings') {
+    <section class="card">
+      <h2>Site settings</h2>
+      <div class="setting-row">
+        <span class="setting-info">
+          <b>Claim reward button</b>
+          <small>{{ claimEnabled() ? 'Users can redeem rewards' : 'Redeem disabled for all users' }}</small>
+        </span>
+        <button type="button" role="switch" [attr.aria-checked]="claimEnabled()" class="switch" [class.on]="claimEnabled()" (click)="toggleClaim()">
+          <span class="knob"></span>
+        </button>
       </div>
     </section>
   }

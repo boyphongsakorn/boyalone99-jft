@@ -56,6 +56,43 @@ app.get('/rewards', async (req, res) => {
   }
 });
 
+// Public settings (claim toggle)
+app.get('/settings', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT `key`, `value` FROM settings');
+    const settings = {};
+    for (const r of rows) settings[r.key] = r.value;
+    res.json({ claim_enabled: settings.claim_enabled !== '0' });
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
+});
+
+// Admin: get all settings
+app.get('/admin/settings', checkAdminAuth, async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT `key`, `value` FROM settings');
+    res.json(rows);
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
+});
+
+// Admin: update setting (claim_enabled)
+app.put('/admin/settings/:key', checkAdminAuth, async (req, res) => {
+  try {
+    const { key } = req.params;
+    const { value } = req.body;
+    await pool.query('INSERT INTO settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)', [key, String(value)]);
+    res.json({ key, value: String(value) });
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to update setting' });
+  }
+});
+
 app.get('/admin/auth/status', async (req, res) => {
   const secret = process.env.ADMIN_2FA_SECRET;
   if (secret) {

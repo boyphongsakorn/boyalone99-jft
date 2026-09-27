@@ -32,7 +32,8 @@ interface AdminUser {
   styleUrl: './admin.css',
 })
 export class Admin implements OnInit {
-  protected readonly tab = signal<'rewards' | 'users' | 'history'>('rewards');
+  protected readonly tab = signal<'rewards' | 'users' | 'history' | 'settings'>('rewards');
+  protected readonly claimEnabled = signal(true);
   protected readonly rewards = signal<AdminReward[]>([]);
   protected readonly users = signal<AdminUser[]>([]);
   protected readonly redemptions = signal<any[]>([]);
@@ -61,8 +62,20 @@ export class Admin implements OnInit {
     return { title: '', description: '', cost: 100, accent: 'peach', icon: '✦', stock: 10 };
   }
 
-  protected setTab(t: 'rewards' | 'users' | 'history') {
+  protected setTab(t: 'rewards' | 'users' | 'history' | 'settings') {
     this.tab.set(t);
+  }
+
+  protected async toggleClaim(): Promise<void> {
+    const next = !this.claimEnabled();
+    try {
+      await this.http.put(`${environment.apiUrl}/admin/settings/claim_enabled`, { value: next ? '1' : '0' }).toPromise();
+      this.claimEnabled.set(next);
+      this.notice.set(next ? 'Claim reward enabled' : 'Claim reward disabled');
+    } catch (e) {
+      console.error(e);
+      this.notice.set('Failed to update setting');
+    }
   }
 
   protected logout(): void {
@@ -75,16 +88,21 @@ export class Admin implements OnInit {
   async refreshAll() {
     this.loading.set(true);
     try {
-      const [rewards, users, redemptions, coins] = await Promise.all([
+      const [rewards, users, redemptions, coins, settings] = await Promise.all([
         this.http.get<AdminReward[]>(`${environment.apiUrl}/rewards`).toPromise(),
         this.http.get<AdminUser[]>(`${environment.apiUrl}/admin/users`).toPromise(),
         this.http.get<any[]>(`${environment.apiUrl}/admin/redemptions`).toPromise(),
         this.http.get<any[]>(`${environment.apiUrl}/admin/coin-history`).toPromise(),
+        this.http.get<any[]>(`${environment.apiUrl}/admin/settings`).toPromise(),
       ]);
       if (rewards) this.rewards.set(rewards);
       if (users) this.users.set(users);
       if (redemptions) this.redemptions.set(redemptions);
       if (coins) this.coinHistory.set(coins);
+      if (settings) {
+        const row: any = (settings as any[]).find((s: any) => s.key === 'claim_enabled');
+        this.claimEnabled.set(!row || row.value !== '0');
+      }
     } catch (e) {
       console.error(e);
       this.notice.set('Failed to load admin data. Is backend running?');

@@ -36,6 +36,14 @@ CREATE TABLE IF NOT EXISTS redemption_history (
     FOREIGN KEY (reward_id) REFERENCES rewards(id)
 );
 
+-- Site Settings Table
+CREATE TABLE IF NOT EXISTS settings (
+    `key` VARCHAR(255) PRIMARY KEY,
+    `value` VARCHAR(255) NOT NULL
+);
+
+INSERT IGNORE INTO settings (`key`, `value`) VALUES ('claim_enabled', '1');
+
 -- Coin Transaction History Table
 CREATE TABLE IF NOT EXISTS coin_history (
     id INT AUTO_INCREMENT PRIMARY KEY,
