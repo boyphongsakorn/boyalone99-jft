@@ -37,10 +37,13 @@ export class Rewards implements OnInit {
   }
 
   async ngOnInit() {
+    if (typeof window === 'undefined') return;
     this.loading.set(true);
+    // Cache-bust so F5/refresh never serves a stale prerendered response
+    const bust = `t=${Date.now()}`;
     // Fetch independently — one failing should not block the other (SSR/refresh safe)
     try {
-      const data = await this.http.get<Reward[]>(`${environment.apiUrl}/rewards`).toPromise();
+      const data = await this.http.get<Reward[]>(`${environment.apiUrl}/rewards?${bust}`).toPromise();
       if (data) {
         this.rewards.set(data);
       }
@@ -49,7 +52,7 @@ export class Rewards implements OnInit {
       this.notice.set('โหลดของรางวัลไม่สำเร็จ ลองรีเฟรชอีกครั้ง');
     }
     try {
-      const settings = await this.http.get<{ claim_enabled: boolean }>(`${environment.apiUrl}/settings`).toPromise();
+      const settings = await this.http.get<{ claim_enabled: boolean }>(`${environment.apiUrl}/settings?${bust}`).toPromise();
       this.claimEnabled.set(settings?.claim_enabled === true);
     } catch (e) {
       console.error('Failed to fetch settings', e);
