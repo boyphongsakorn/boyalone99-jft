@@ -5,6 +5,8 @@ const axios = require('axios');
 const mysql = require('mysql2/promise');
 const otplib = require('otplib');
 const qrcode = require('qrcode');
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 const app = express();
 app.use(cors());
@@ -23,13 +25,19 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 
+const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || crypto.randomBytes(32).toString('hex');
+
 // Middleware to check Admin Auth
 const checkAdminAuth = (req, res, next) => {
   const token = req.headers['x-admin-token'];
-  if (token === 'authenticated') {
+  if (!token) {
+    return res.status(403).json({ error: 'Forbidden: Admin access required' });
+  }
+  try {
+    jwt.verify(token, ADMIN_JWT_SECRET);
     next();
-  } else {
-    res.status(403).json({ error: 'Forbidden: Admin access required' });
+  } catch (e) {
+    return res.status(403).json({ error: 'Forbidden: Invalid or expired admin token' });
   }
 };
 
@@ -83,7 +91,8 @@ app.post('/admin/auth/verify', async (req, res) => {
     // const isValid = otplib.authenticator.check(token, secret);
     const isValid = await otplib.verify({ secret, token });
     if (isValid) {
-      res.json({ success: true, adminToken: 'authenticated' });
+      const adminToken = jwt.sign({ role: 'admin' }, ADMIN_JWT_SECRET, { expiresIn: '12h' });
+      res.json({ success: true, adminToken });
     } else {
       res.status(401).json({ error: 'Invalid OTP token' });
     }
