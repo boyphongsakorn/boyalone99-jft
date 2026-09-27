@@ -18,6 +18,8 @@
     <div class="otp-section">
       <input 
         type="text" 
+        inputmode="numeric"
+        autocomplete="one-time-code"
         maxlength="6" 
         [(ngModel)]="otp" 
         placeholder="000000"
