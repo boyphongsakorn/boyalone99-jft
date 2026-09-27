@@ -38,18 +38,22 @@ export class Rewards implements OnInit {
 
   async ngOnInit() {
     this.loading.set(true);
+    // Fetch independently — one failing should not block the other (SSR/refresh safe)
     try {
-      const [data, settings] = await Promise.all([
-        this.http.get<Reward[]>(`${environment.apiUrl}/rewards`).toPromise(),
-        this.http.get<{ claim_enabled: boolean }>(`${environment.apiUrl}/settings`).toPromise(),
-      ]);
+      const data = await this.http.get<Reward[]>(`${environment.apiUrl}/rewards`).toPromise();
       if (data) {
         this.rewards.set(data);
       }
-      this.claimEnabled.set(settings?.claim_enabled === true);
     } catch (e) {
       console.error('Failed to fetch rewards', e);
       this.notice.set('โหลดของรางวัลไม่สำเร็จ ลองรีเฟรชอีกครั้ง');
+    }
+    try {
+      const settings = await this.http.get<{ claim_enabled: boolean }>(`${environment.apiUrl}/settings`).toPromise();
+      this.claimEnabled.set(settings?.claim_enabled === true);
+    } catch (e) {
+      console.error('Failed to fetch settings', e);
+      this.claimEnabled.set(false);
     } finally {
       this.loading.set(false);
     }
