@@ -53,6 +53,11 @@
     </div>
 
     <div class="reward-grid">
+      @if (loading()) {
+        <p class="notice" role="status">กำลังโหลดของรางวัล…</p>
+      } @else if (rewards().length === 0) {
+        <p class="notice" role="status">ยังไม่มีของรางวัลตอนนี้ กลับมาดูใหม่เร็ว ๆ นี้</p>
+      } @else {
       @for (reward of rewards(); track reward.title) {
         <article class="reward-card" [class]="reward.accent">
           <div class="reward-art" aria-hidden="true">{{ reward.icon }}</div>
@@ -73,11 +78,12 @@
           </div>
         </article>
       }
+      }
     </div>
   </section>
 
   <footer class="page-footer">
     <span>Made with care for the BoyAlone99 community.</span>
-    <span>Alone Coin is mock data for now · v1.0</span>
+    <span>v1.0</span>
   </footer>
 </main>

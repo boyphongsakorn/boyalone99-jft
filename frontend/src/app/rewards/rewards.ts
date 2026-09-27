@@ -1,4 +1,4 @@
-import { Component, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, signal, OnInit } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { RouterLink, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -19,12 +19,12 @@ interface Reward {
   styleUrl: './rewards.css',
   templateUrl: './rewards.html',
 })
-export class Rewards implements OnInit, OnDestroy {
+export class Rewards implements OnInit {
   protected readonly isLoggedIn = signal(false);
-  protected readonly balance = signal(1250);
+  protected readonly balance = signal(0);
   protected readonly notice = signal<string | null>(null);
   protected readonly rewards = signal<readonly Reward[]>([]);
-  private pollTimer: ReturnType<typeof setInterval> | null = null;
+  protected readonly loading = signal(true);
 
   constructor(private http: HttpClient, private router: Router) {
     if (typeof window !== 'undefined') {
@@ -36,25 +36,21 @@ export class Rewards implements OnInit, OnDestroy {
   }
 
   async ngOnInit() {
-    await this.loadRewards();
-    await this.fetchBalance();
-    if (typeof window !== 'undefined') {
-      this.pollTimer = setInterval(() => this.loadRewards(true), 10000);
-    }
-  }
-
-  ngOnDestroy() {
-    if (this.pollTimer) clearInterval(this.pollTimer);
-  }
-
-  private async loadRewards(silent = false) {
+    this.loading.set(true);
     try {
       const data = await this.http.get<Reward[]>(`${environment.apiUrl}/rewards`).toPromise();
       if (data) {
         this.rewards.set(data);
       }
     } catch (e) {
-      if (!silent) console.error('Failed to fetch rewards', e);
+      console.error('Failed to fetch rewards', e);
+      this.notice.set('โหลดของรางวัลไม่สำเร็จ ลองรีเฟรชอีกครั้ง');
+    } finally {
+      this.loading.set(false);
+    }
+
+    if (this.isLoggedIn()) {
+      await this.fetchBalance();
     }
   }
 
