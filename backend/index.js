@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const mysql = require('mysql2/promise');
-const { authenticator } = require('otplib');
+const otplib = require('otplib');
 const qrcode = require('qrcode');
 
 const app = express();
@@ -54,7 +54,7 @@ app.get('/admin/auth/qr', async (req, res) => {
   try {
     const secret = process.env.ADMIN_2FA_SECRET;
     if (!secret) return res.status(500).json({ error: '2FA secret not configured' });
-    const otpauth = authenticator.keyuri('BoyAlone99 Admin', 'admin@boyalone99', secret);
+    const otpauth = otplib.authenticator.keyuri('BoyAlone99 Admin', 'admin@boyalone99', secret);
     const qrImageUrl = await qrcode.toDataURL(otpauth);
     res.json({ qrCode: qrImageUrl });
   } catch (error) {
@@ -68,7 +68,7 @@ app.post('/admin/auth/verify', async (req, res) => {
     const { token } = req.body;
     const secret = process.env.ADMIN_2FA_SECRET;
     if (!secret) return res.status(500).json({ error: '2FA secret not configured' });
-    const isValid = authenticator.check(token, secret);
+    const isValid = otplib.authenticator.check(token, secret);
     if (isValid) {
       res.json({ success: true, adminToken: 'authenticated' });
     } else {
