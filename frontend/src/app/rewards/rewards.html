@@ -6,7 +6,14 @@
       <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
       <span>BoyAlone99 <small>Community</small></span>
     </a>
-    <span class="header-note">reward shelf / 01</span>
+    <div class="header-right">
+      @if (isLoggedIn()) {
+        <a class="profile-link" routerLink="/profile">My Profile</a>
+      } @else {
+        <a class="login-link" routerLink="/login">Login</a>
+      }
+      <span class="header-note">reward shelf / 01</span>
+    </div>
   </header>
 
   <section class="hero" aria-labelledby="rewards-title">

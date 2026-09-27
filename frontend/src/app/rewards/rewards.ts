@@ -22,6 +22,13 @@ export class Rewards {
   protected readonly balance = signal(1250);
   protected readonly notice = signal<string | null>(null);
 
+  constructor() {
+    const user = localStorage.getItem('user_profile');
+    if (user) {
+      this.isLoggedIn.set(true);
+    }
+  }
+
   protected readonly rewards: readonly Reward[] = [
     {
       title: 'Alone Sticker Pack',

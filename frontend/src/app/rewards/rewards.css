@@ -33,6 +33,15 @@
 .paper-line::after { border: 2px solid rgba(37, 37, 37, 0.06); border-radius: 50%; content: ''; inset: 9%; position: absolute; transform: rotate(-17deg); }
 .site-header, .hero, .notice, .reward-section, .page-footer { margin-inline: auto; max-width: 1180px; position: relative; z-index: 1; }
 .site-header { align-items: center; display: flex; justify-content: space-between; }
+.header-right { align-items: center; display: flex; gap: 12px; }
+.profile-link, .login-link { 
+  color: var(--ink); 
+  font-size: 0.75rem; 
+  font-weight: 700; 
+  text-decoration: none; 
+  border-bottom: 1px dashed var(--ink);
+}
+.profile-link:hover, .login-link:hover { color: var(--coral); border-color: var(--coral); }
 .brand { align-items: center; color: var(--ink); display: flex; font-size: 1rem; font-weight: 700; gap: 10px; line-height: 1; text-decoration: none; transform: rotate(-2deg); }
 .brand small { color: var(--teal); display: block; font-size: 0.65rem; letter-spacing: 0.12em; margin-top: 6px; }
 .brand-mark { display: flex; gap: 3px; height: 23px; transform: skew(-18deg); width: 26px; }
