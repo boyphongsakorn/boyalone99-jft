@@ -2,6 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { environment } from '../../environments/environment';
 
 interface DiscordUser {
@@ -14,7 +15,7 @@ interface DiscordUser {
 @Component({
   selector: 'app-login-callback',
   standalone: true,
-  imports: [CommonModule, HttpClientModule],
+  imports: [CommonModule, HttpClientModule, RouterLink],
   template: `
     <main class="callback-page">
       <div class="ambient ambient-left" aria-hidden="true"></div>
