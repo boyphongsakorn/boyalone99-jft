@@ -1,9 +1,0 @@
-[build]
-  base = "frontend/"
-  command = "npm run build"
-  publish = "frontend/dist/boyalone99-jft/browser"
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
