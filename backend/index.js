@@ -608,7 +608,7 @@ const refreshBroadcasterToken = async () => {
   process.env.TWITCH_OAUTH_TOKEN = twitchdata.token ?? twitchdata.access_token;
   broadcasterToken = process.env.TWITCH_OAUTH_TOKEN;
   if (twitchdata.refresh_token) process.env.TWITCH_OAUTH_REFRESH = twitchdata.refresh_token;
-  console.log('🔄 Refreshed Twitch broadcaster token');
+  console.log('🔄 Refreshed Twitch broadcaster token: ' + broadcasterToken);
   return broadcasterToken;
 };
 
@@ -628,6 +628,7 @@ const twitchHelix = async (method, path, { params, body, retry = true } = {}) =>
     console.log(res.data);
     return res.data;
   } catch (e) {
+    console.error('Twitch Helix Error:', e.response?.data || e.message);
     if (e.response?.status === 401 && retry) {
       await refreshBroadcasterToken();
       return twitchHelix(method, path, { params, body, retry: false });
