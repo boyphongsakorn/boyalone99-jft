@@ -599,10 +599,14 @@ let broadcasterToken = process.env.TWITCH_BROADCASTER_TOKEN || process.env.TWITC
 const refreshBroadcasterToken = async () => {
   const refreshToken = process.env.TWITCH_OAUTH_REFRESH;
   if (!refreshToken) throw Object.assign(new Error('TWITCH_OAUTH_REFRESH not configured'), { status: 500 });
-  const res = await axios.post('https://twitchtokengenerator.com/api/v2/tokens/refresh', {
-    refresh_token: refreshToken,
-  }, { headers: { 'Content-Type': 'application/json', Accept: 'application/json' } });
-  broadcasterToken = res.data.access_token;
+  // const res = await axios.post('https://twitchtokengenerator.com/api/v2/tokens/refresh', {
+  //   refresh_token: refreshToken,
+  // }, { headers: { 'Content-Type': 'application/json', Accept: 'application/json' } });
+  // broadcasterToken = res.data.access_token;
+  const twitchrefresh = await fetch('https://twitchtokengenerator.com/api/refresh/' + process.env.TWITCH_OAUTH_REFRESH);
+  const twitchdata = await twitchrefresh.json();
+  process.env.TWITCH_OAUTH_TOKEN = twitchdata.token ?? twitchdata.access_token;
+  broadcasterToken = process.env.TWITCH_OAUTH_TOKEN;
   if (res.data.refresh_token) process.env.TWITCH_OAUTH_REFRESH = res.data.refresh_token;
   console.log('🔄 Refreshed Twitch broadcaster token');
   return broadcasterToken;
