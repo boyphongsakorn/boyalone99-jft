@@ -42,6 +42,7 @@ export class Admin implements OnInit {
   protected readonly coinHistory = signal<any[]>([]);
   protected readonly notice = signal<string | null>(null);
   protected readonly loading = signal(false);
+  protected readonly eventsubStatus = signal<any[] | null>(null);
 
   // reward form
   protected editingId = signal<number | null>(null);
@@ -97,6 +98,26 @@ export class Admin implements OnInit {
       this.notice.set('Announcement saved');
     } catch {
       this.notice.set('Failed to save announcement');
+    }
+  }
+
+  protected async checkEventsub(): Promise<void> {
+    try {
+      const res: any = await this.http.get(`${environment.apiUrl}/eventsub/subscriptions`).toPromise();
+      this.eventsubStatus.set(res?.data ?? []);
+      this.notice.set(`EventSub: ${(res?.data ?? []).length} active subscription(s)`);
+    } catch (e: any) {
+      this.notice.set(e?.error?.error || 'EventSub check failed');
+    }
+  }
+
+  protected async subscribeEventsub(): Promise<void> {
+    try {
+      await this.http.post(`${environment.apiUrl}/eventsub/subscribe`, {}).toPromise();
+      this.notice.set('EventSub subscribed — Twitch will push redemptions');
+      await this.checkEventsub();
+    } catch (e: any) {
+      this.notice.set(e?.error?.error || 'EventSub subscribe failed');
     }
   }
 

@@ -171,6 +171,17 @@
         <button type="button" class="primary" (click)="saveAlert()">Save announcement</button>
       </div>
     </section>
+    <section class="card" style="margin-top: 16px;">
+      <h2>Twitch EventSub (Channel Points listener)</h2>
+      <p style="font-size: .78rem; color: var(--muted);">Subscribe once after deploy or secret rotation — Twitch then pushes redemptions to <code>/eventsub</code> and AC is granted automatically.</p>
+      <div class="form-actions">
+        <button type="button" class="primary" (click)="subscribeEventsub()">Subscribe EventSub</button>
+        <button type="button" (click)="checkEventsub()">Check status</button>
+      </div>
+      @if (eventsubStatus() !== null) {
+        <p style="font-size: .8rem;">Active: {{ eventsubStatus()!.length }} subscription(s)</p>
+      }
+    </section>
   }
 
   <footer class="page-footer">
