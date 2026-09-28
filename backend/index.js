@@ -588,17 +588,31 @@ app.get('/auth/discord/callback', async (req, res) => {
 });
 
 // Twitch Channel Points — detect custom reward redemptions and convert to Alone Coin
-// Setup: TWITCH_BROADCASTER_ID + TWITCH_BROADCASTER_TOKEN (broadcaster OAuth with
+// Setup: TWITCH_BROADCASTER_ID + tokens from twitchtokengenerator.com saved as
+// TWITCH_OAUTH_TOKEN + TWITCH_OAUTH_REFRESH (broadcaster OAuth with
 // channel:read:redemptions + channel:manage:redemptions) + TWITCH_CHANNEL_REWARD_ID.
-// Get the token via Twitch OAuth (response_type=token) then list IDs via GET /twitch/channel-rewards.
 // ponytail: no EventSub webhook — manual claim flow (user redeems on Twitch, clicks claim, backend verifies + fulfills) covers it without public webhook infra
-const twitchHelix = async (method, path, { params, body } = {}) => {
-  const broadcasterToken = process.env.TWITCH_BROADCASTER_TOKEN;
-  if (!process.env.TWITCH_BROADCASTER_ID || !broadcasterToken) {
-    const e = new Error('TWITCH_BROADCASTER_ID / TWITCH_BROADCASTER_TOKEN not configured');
-    e.status = 500;
-    throw e;
+let broadcasterToken = process.env.TWITCH_BROADCASTER_TOKEN || process.env.TWITCH_OAUTH_TOKEN || null;
+
+// Exchange the refresh token for a fresh broadcaster token via twitchtokengenerator.com
+// (generator tokens use TTG's client id, so our TWITCH_CLIENT_SECRET can't refresh them directly)
+const refreshBroadcasterToken = async () => {
+  const refreshToken = process.env.TWITCH_OAUTH_REFRESH;
+  if (!refreshToken) throw Object.assign(new Error('TWITCH_OAUTH_REFRESH not configured'), { status: 500 });
+  const res = await axios.post('https://twitchtokengenerator.com/api/v2/tokens/refresh', {
+    refresh_token: refreshToken,
+  }, { headers: { 'Content-Type': 'application/json', Accept: 'application/json' } });
+  broadcasterToken = res.data.access_token;
+  if (res.data.refresh_token) process.env.TWITCH_OAUTH_REFRESH = res.data.refresh_token;
+  console.log('🔄 Refreshed Twitch broadcaster token');
+  return broadcasterToken;
+};
+
+const twitchHelix = async (method, path, { params, body, retry = true } = {}) => {
+  if (!process.env.TWITCH_BROADCASTER_ID) {
+    throw Object.assign(new Error('TWITCH_BROADCASTER_ID not configured'), { status: 500 });
   }
+  if (!broadcasterToken) await refreshBroadcasterToken();
   try {
     const res = await axios({
       method,
@@ -609,10 +623,12 @@ const twitchHelix = async (method, path, { params, body } = {}) => {
     });
     return res.data;
   } catch (e) {
+    if (e.response?.status === 401 && retry) {
+      await refreshBroadcasterToken();
+      return twitchHelix(method, path, { params, body, retry: false });
+    }
     if (e.response?.status === 401) {
-      const err = new Error('Broadcaster token expired — re-auth and update TWITCH_BROADCASTER_TOKEN');
-      err.status = 401;
-      throw err;
+      throw Object.assign(new Error('Broadcaster token expired — re-auth via twitchtokengenerator.com'), { status: 401 });
     }
     throw e;
   }
