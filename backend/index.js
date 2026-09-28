@@ -623,7 +623,7 @@ const twitchHelix = async (method, path, { params, body, retry = true } = {}) =>
       url: `https://api.twitch.tv/helix${path}`,
       params,
       data: body,
-      headers: { Authorization: `Bearer ${broadcasterToken}`, 'Client-Id': process.env.TWITCH_CLIENT_ID },
+      headers: { Authorization: `Bearer ${broadcasterToken}`, 'Client-Id': process.env.TWITCH_TTG_CLIENT_ID },
     });
     return res.data;
   } catch (e) {
