@@ -616,7 +616,7 @@ const twitchHelix = async (method, path, { params, body, retry = true } = {}) =>
   if (!process.env.TWITCH_BROADCASTER_ID) {
     throw Object.assign(new Error('TWITCH_BROADCASTER_ID not configured'), { status: 500 });
   }
-  if (broadcasterToken) await refreshBroadcasterToken();
+  if (!broadcasterToken) await refreshBroadcasterToken();
   try {
     const res = await axios({
       method,
