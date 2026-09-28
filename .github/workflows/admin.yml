@@ -3,8 +3,14 @@ name: Admin Docker Image CI
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'admin/**'
+      - '.github/workflows/admin.yml'
   pull_request:
     branches: [ "main" ]
+    paths:
+      - 'admin/**'
+      - '.github/workflows/admin.yml'
 
 env:
   REGISTRY: ghcr.io
