@@ -277,6 +277,41 @@ app.get('/balance/:userId', async (req, res) => {
   }
 });
 
+// User coin history (earn/spend ledger)
+// GET /users/:id/coin-history
+app.get('/users/:id/coin-history', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows] = await pool.query(
+      'SELECT id, amount, reason, created_at FROM coin_history WHERE user_id = ? ORDER BY created_at DESC LIMIT 100',
+      [id]
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to fetch coin history' });
+  }
+});
+
+// User redemption history (rewards redeemed)
+// GET /users/:id/redemptions
+app.get('/users/:id/redemptions', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows] = await pool.query(
+      `SELECT h.id, h.redeemed_at, r.title AS reward_title, r.cost
+       FROM redemption_history h
+       LEFT JOIN rewards r ON r.id = h.reward_id
+       WHERE h.user_id = ? ORDER BY h.redeemed_at DESC LIMIT 100`,
+      [id]
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to fetch redemptions' });
+  }
+});
+
 // Get user profile (email + epic username from DB)
 // GET /users/:id
 app.get('/users/:id', async (req, res) => {

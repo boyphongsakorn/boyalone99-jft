@@ -8,6 +8,7 @@
     </a>
     <div class="header-right">
       @if (isLoggedIn()) {
+        <a class="profile-link" routerLink="/history">History</a>
         <a class="profile-link" routerLink="/profile">My Profile</a>
         <button type="button" class="logout-btn" (click)="logout()">Logout</button>
       } @else {
