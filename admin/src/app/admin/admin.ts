@@ -43,6 +43,9 @@ export class Admin implements OnInit {
   protected readonly notice = signal<string | null>(null);
   protected readonly loading = signal(false);
   protected readonly eventsubStatus = signal<any[] | null>(null);
+  protected readonly channelRewards = signal<any[]>([]);
+  protected channelTitle = 'แลก Alone Coin';
+  protected channelCost = 1000;
 
   // reward form
   protected editingId = signal<number | null>(null);
@@ -128,6 +131,30 @@ export class Admin implements OnInit {
       this.notice.set('Opened Twitch authorize — login as broadcaster, then click Subscribe');
     } catch (e: any) {
       this.notice.set(e?.error?.error || 'Authorize failed');
+    }
+  }
+
+  protected async loadChannelRewards(): Promise<void> {
+    try {
+      const res: any = await this.http.get(`${environment.apiUrl}/twitch/channel-rewards`).toPromise();
+      this.channelRewards.set(res ?? []);
+      this.notice.set(`Found ${(res ?? []).length} Twitch reward(s)`);
+    } catch (e: any) {
+      this.notice.set(e?.error?.error || 'Load Twitch rewards failed');
+    }
+  }
+
+  protected async createChannelReward(): Promise<void> {
+    if (!this.channelTitle.trim() || !(this.channelCost >= 1)) {
+      this.notice.set('Enter reward title and cost >= 1');
+      return;
+    }
+    try {
+      const res: any = await this.http.post(`${environment.apiUrl}/admin/twitch/channel-rewards`, { title: this.channelTitle.trim(), cost: Math.floor(this.channelCost) }).toPromise();
+      this.notice.set(`Created Twitch reward "${res.title}" (${res.id}) — set TWITCH_CHANNEL_REWARD_ID=${res.id} in backend env`);
+      await this.loadChannelRewards();
+    } catch (e: any) {
+      this.notice.set(e?.error?.error || 'Create Twitch reward failed');
     }
   }
 

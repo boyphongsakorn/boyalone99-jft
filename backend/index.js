@@ -638,6 +638,8 @@ let ttgClientId =
   process.env.TWITCH_TTG_CLIENT_ID && !process.env.TWITCH_TTG_CLIENT_ID.startsWith('your_')
     ? process.env.TWITCH_TTG_CLIENT_ID
     : 'gp762nuuoqcoxypju8c569th9wz7q5';
+// Client-Id that issued the current broadcasterToken — must match in Helix header.
+let broadcasterClientId = ttgClientId;
 
 // Exchange the refresh token for a fresh broadcaster token via twitchtokengenerator.com
 // (generator tokens use TTG's client id, so our TWITCH_CLIENT_SECRET can't refresh them directly)
@@ -663,6 +665,7 @@ const doRefresh = async () => {
     process.env.TWITCH_OAUTH_TOKEN = res.data.access_token;
     if (res.data.refresh_token) process.env.TWITCH_OAUTH_REFRESH = res.data.refresh_token;
     if (res.data.client_id) ttgClientId = res.data.client_id;
+    broadcasterClientId = ttgClientId;
     console.log('🔄 Refreshed Twitch broadcaster token');
     return broadcasterToken;
   } catch (e) {
@@ -683,7 +686,7 @@ const twitchHelix = async (method, path, { params, body, retry = true } = {}) =>
       params,
       data: body,
       timeout: 7000,
-      headers: { Authorization: `Bearer ${broadcasterToken}`, 'Client-Id': ttgClientId },
+      headers: { Authorization: `Bearer ${broadcasterToken}`, 'Client-Id': broadcasterClientId },
     });
     return res.data;
   } catch (e) {
@@ -759,6 +762,39 @@ app.get('/twitch/channel-rewards', async (req, res) => {
     console.error('Channel Rewards Error:', error.response?.data || error.message);
     const upstream = error.response?.status;
     res.status(upstream === 408 ? 504 : upstream || error.status || 500).json({ error: error.response?.data?.message || error.message || 'Failed to list channel rewards' });
+  }
+});
+
+// Create channel-point reward via API so it is owned by the same Client-Id —
+// dashboard rewards always 403 on Helix query. Requires broadcaster token with
+// channel:manage:redemptions (TTG generator or step 1 Authorize).
+// POST /admin/twitch/channel-rewards { title, cost, prompt? }
+app.post('/admin/twitch/channel-rewards', checkAdminAuth, async (req, res) => {
+  try {
+    const title = String(req.body?.title || '').trim().slice(0, 45);
+    const cost = Number(req.body?.cost);
+    const prompt = String(req.body?.prompt || 'Redeem for Alone Coin').slice(0, 200);
+    if (!title) return res.status(400).json({ error: 'title required (max 45 chars)' });
+    if (!Number.isInteger(cost) || cost < 1) return res.status(400).json({ error: 'cost must be an integer >= 1' });
+    const data = await twitchHelix('post', '/channel_points/custom_rewards', {
+      params: { broadcaster_id: process.env.TWITCH_BROADCASTER_ID },
+      body: {
+        title,
+        cost,
+        prompt,
+        is_enabled: true,
+        is_user_input_required: false,
+        should_redemptions_skip_request_queue: false,
+      },
+    });
+    const r = data.data?.[0];
+    if (!r) return res.status(500).json({ error: 'Twitch returned no reward' });
+    process.env.TWITCH_CHANNEL_REWARD_ID = r.id;
+    res.status(201).json({ id: r.id, title: r.title, cost: r.cost, is_enabled: r.is_enabled });
+  } catch (error) {
+    console.error('Create Reward Error:', error.response?.data || error.message);
+    const upstream = error.response?.status;
+    res.status(upstream || error.status || 500).json({ error: error.response?.data?.message || error.message || 'Failed to create reward' });
   }
 });
 
@@ -924,6 +960,7 @@ app.get('/auth/twitch/broadcaster/callback', async (req, res) => {
       return res.status(400).send(`Authorized as ${login.login} (${login.id}) but TWITCH_BROADCASTER_ID=${process.env.TWITCH_BROADCASTER_ID}. Log in as the broadcaster.`);
     }
     broadcasterToken = userToken;
+    broadcasterClientId = process.env.TWITCH_CLIENT_ID;
     console.log(`✅ Broadcaster ${login?.login} authorized app ${process.env.TWITCH_CLIENT_ID}`);
     res.send('<h2>Broadcaster authorized ✅</h2><p>Close this tab, go back to admin and click <b>Subscribe EventSub</b>.</p>');
   } catch (e) {

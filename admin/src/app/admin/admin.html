@@ -172,6 +172,29 @@
       </div>
     </section>
     <section class="card" style="margin-top: 16px;">
+      <h2>Twitch Channel Reward (API-owned)</h2>
+      <p style="font-size: .78rem; color: var(--muted);">Dashboard rewards always 403 on API query. Create it here so EventSub + claim button detect it. Needs broadcaster token with <code>channel:manage:redemptions</code> (TTG generator or step 1 Authorize below).</p>
+      <label>Reward title<input [(ngModel)]="channelTitle" placeholder="แลก Alone Coin" maxlength="45" /></label>
+      <label>Cost (channel points)<input type="number" [(ngModel)]="channelCost" min="1" step="1" /></label>
+      <div class="form-actions">
+        <button type="button" class="primary" (click)="createChannelReward()">Create Twitch reward</button>
+        <button type="button" (click)="loadChannelRewards()">List rewards</button>
+      </div>
+      @if (channelRewards().length > 0) {
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Title</th><th>Cost</th><th>Enabled</th></tr></thead>
+            <tbody>
+              @for (r of channelRewards(); track r.id) {
+                <tr><td><small>{{ r.id }}</small></td><td>{{ r.title }}</td><td>{{ r.cost }}</td><td>{{ r.is_enabled ? 'yes' : 'no' }}</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <p style="font-size: .78rem; color: var(--muted);">Copy the ID into backend env <code>TWITCH_CHANNEL_REWARD_ID</code> + redeploy.</p>
+      }
+    </section>
+    <section class="card" style="margin-top: 16px;">
       <h2>Twitch EventSub (Channel Points listener)</h2>
       <p style="font-size: .78rem; color: var(--muted);">Subscribe once after deploy or secret rotation — Twitch then pushes redemptions to <code>/eventsub</code> and AC is granted automatically.</p>
       <div class="form-actions">
