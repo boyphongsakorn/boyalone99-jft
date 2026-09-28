@@ -121,6 +121,16 @@ export class Admin implements OnInit {
     }
   }
 
+  protected async authorizeEventsub(): Promise<void> {
+    try {
+      const res: any = await this.http.get(`${environment.apiUrl}/eventsub/authorize`).toPromise();
+      if (res?.url && typeof window !== 'undefined') window.open(res.url, '_blank');
+      this.notice.set('Opened Twitch authorize — login as broadcaster, then click Subscribe');
+    } catch (e: any) {
+      this.notice.set(e?.error?.error || 'Authorize failed');
+    }
+  }
+
   protected logout(): void {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('admin_token');

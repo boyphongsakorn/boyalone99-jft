@@ -175,7 +175,8 @@
       <h2>Twitch EventSub (Channel Points listener)</h2>
       <p style="font-size: .78rem; color: var(--muted);">Subscribe once after deploy or secret rotation — Twitch then pushes redemptions to <code>/eventsub</code> and AC is granted automatically.</p>
       <div class="form-actions">
-        <button type="button" class="primary" (click)="subscribeEventsub()">Subscribe EventSub</button>
+        <button type="button" class="primary" (click)="authorizeEventsub()">1. Authorize as broadcaster</button>
+        <button type="button" class="primary" (click)="subscribeEventsub()">2. Subscribe EventSub</button>
         <button type="button" (click)="checkEventsub()">Check status</button>
       </div>
       @if (eventsubStatus() !== null) {

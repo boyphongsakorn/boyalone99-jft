@@ -886,6 +886,52 @@ const grantChannelPoints = async ({ redemptionId, twitchUserId }) => {
   return { granted: true, userId: users[0].id, amount };
 };
 
+// Broadcaster grants OUR app (TWITCH_CLIENT_ID) channel scopes so the app token can subscribe.
+// 403 "missing proper authorization" = this step was skipped (TTG token authorizes TTG's app, not ours).
+// GET /eventsub/authorize (admin) -> { url, redirectUri } — open url as the broadcaster, then click Subscribe.
+app.get('/eventsub/authorize', checkAdminAuth, (req, res) => {
+  const cid = process.env.TWITCH_CLIENT_ID;
+  if (!cid || cid.startsWith('your_')) return res.status(500).json({ error: 'TWITCH_CLIENT_ID not configured' });
+  const base = (process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
+  if (!base.startsWith('https://')) return res.status(500).json({ error: 'PUBLIC_BASE_URL must be https://...' });
+  const redirectUri = `${base}/auth/twitch/broadcaster/callback`;
+  const scope = 'channel:read:redemptions channel:manage:redemptions';
+  const url = `https://id.twitch.tv/oauth2/authorize?client_id=${encodeURIComponent(cid)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}`;
+  res.json({ url, redirectUri, scope });
+});
+
+// OAuth callback for the broadcaster grant above. Register redirectUri in Twitch dev console first.
+app.get('/auth/twitch/broadcaster/callback', async (req, res) => {
+  const code = req.query.code;
+  if (!code) return res.status(400).send('Missing code');
+  try {
+    const base = (process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
+    const redirectUri = `${base}/auth/twitch/broadcaster/callback`;
+    const tokenRes = await axios.post('https://id.twitch.tv/oauth2/token', new URLSearchParams({
+      client_id: process.env.TWITCH_CLIENT_ID,
+      client_secret: process.env.TWITCH_CLIENT_SECRET,
+      code: String(code),
+      grant_type: 'authorization_code',
+      redirect_uri: redirectUri,
+    }), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 8000 });
+    const userToken = tokenRes.data.access_token;
+    const me = await axios.get('https://api.twitch.tv/helix/users', {
+      headers: { Authorization: `Bearer ${userToken}`, 'Client-Id': process.env.TWITCH_CLIENT_ID },
+      timeout: 7000,
+    });
+    const login = me.data?.data?.[0];
+    if (login && process.env.TWITCH_BROADCASTER_ID && !String(process.env.TWITCH_BROADCASTER_ID).startsWith('your_') && login.id !== String(process.env.TWITCH_BROADCASTER_ID)) {
+      return res.status(400).send(`Authorized as ${login.login} (${login.id}) but TWITCH_BROADCASTER_ID=${process.env.TWITCH_BROADCASTER_ID}. Log in as the broadcaster.`);
+    }
+    broadcasterToken = userToken;
+    console.log(`✅ Broadcaster ${login?.login} authorized app ${process.env.TWITCH_CLIENT_ID}`);
+    res.send('<h2>Broadcaster authorized ✅</h2><p>Close this tab, go back to admin and click <b>Subscribe EventSub</b>.</p>');
+  } catch (e) {
+    console.error('Broadcaster Authorize Error:', e.response?.data || e.message);
+    res.status(500).send('Authorization failed: ' + (e.response?.data?.message || e.message));
+  }
+});
+
 app.post('/eventsub', async (req, res) => {
   if (!verifyEventSub(req)) return res.sendStatus(403);
   const type = req.headers['twitch-eventsub-message-type'];
@@ -916,15 +962,12 @@ app.post('/eventsub/subscribe', checkAdminAuth, async (req, res) => {
       return res.status(500).json({ error: 'TWITCH_EVENTSUB_SECRET must be 10-100 chars' });
     const base = (process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
     if (!base.startsWith('https://')) return res.status(500).json({ error: 'PUBLIC_BASE_URL must be https://...' });
-    const rewardId = process.env.TWITCH_CHANNEL_REWARD_ID;
+    // ponytail: no reward_id filter — rewards created via dashboard/TTG belong to another client ID and cause 403; filter by reward in /eventsub handler instead
     const data = await twitchHelixApp('post', '/eventsub/subscriptions', {
       body: {
         type: 'channel.channel_points_custom_reward_redemption.add',
         version: '1',
-        condition: {
-          broadcaster_user_id: String(process.env.TWITCH_BROADCASTER_ID),
-          ...(rewardId && !rewardId.startsWith('your_') ? { reward_id: rewardId } : {}),
-        },
+        condition: { broadcaster_user_id: String(process.env.TWITCH_BROADCASTER_ID) },
         transport: { method: 'webhook', callback: `${base}/eventsub`, secret },
       },
     });
@@ -932,7 +975,11 @@ app.post('/eventsub/subscribe', checkAdminAuth, async (req, res) => {
   } catch (error) {
     console.error('EventSub Subscribe Error:', error.response?.data || error.message);
     const upstream = error.response?.status;
-    res.status(upstream === 408 ? 504 : upstream || error.status || 500).json({ error: error.response?.data?.message || error.message || 'Failed to subscribe' });
+    const detail = error.response?.data?.message || error.message || 'Failed to subscribe';
+    const hint = upstream === 403
+      ? ' — broadcaster has not authorized THIS app: open GET /eventsub/authorize as the broadcaster first (register its redirectUri in Twitch dev console), then Subscribe again.'
+      : '';
+    res.status(upstream === 408 ? 504 : upstream || error.status || 500).json({ error: detail + hint });
   }
 });
 
