@@ -342,6 +342,9 @@ app.get('/auth/twitch/callback', async (req, res) => {
     // If link mode (main user id passed), attach twitch to existing user
     const linkUserId = req.query.linkUserId ? String(req.query.linkUserId) : null;
     if (linkUserId) {
+      // Prevent linking a twitch already owned by another account
+      const [taken] = await pool.query('SELECT id FROM users WHERE twitch_id = ? AND id != ?', [twitchUser.id, linkUserId]);
+      if (taken.length > 0) return res.status(409).json({ error: 'This Twitch account is already linked to another user' });
       await pool.query(
         'UPDATE users SET twitch_id = ?, twitch_username = ? WHERE id = ?',
         [twitchUser.id, twitchUser.login, linkUserId]
@@ -352,6 +355,25 @@ app.get('/auth/twitch/callback', async (req, res) => {
         twitch_username: twitchUser.login,
         linked: true,
         provider: 'twitch',
+      });
+    }
+    // Login mode: if this twitch is already linked to an account, log into THAT account
+    const [linked] = await pool.query(
+      'SELECT id, username, email, avatar, alone_coin, epic_username, twitch_id, twitch_username FROM users WHERE twitch_id = ?',
+      [twitchUser.id]
+    );
+    if (linked.length > 0) {
+      const owner = linked[0];
+      return res.json({
+        username: owner.username,
+        avatar: null,
+        avatarUrl: twitchUser.profile_image_url || null,
+        id: owner.id,
+        email: owner.email || twitchUser.email || null,
+        provider: 'discord',
+        twitch_id: twitchUser.id,
+        twitch_username: twitchUser.login,
+        linked_account: true,
       });
     }
     // Login mode: use twitch:ID as primary key

@@ -120,15 +120,28 @@ export class LoginCallback implements OnInit {
           this.router.navigateByUrl('/profile');
           return;
         }
-        const user = {
-          username: twitchData.username,
-          avatar: twitchData.avatar,
-          avatarUrl: twitchData.avatarUrl,
-          id: twitchData.id,
-          email: twitchData.email,
-          provider: 'twitch',
-          twitch_username: twitchData.twitch_username,
-        } as any;
+        // If twitch was already linked to another (discord) account, backend
+        // returns that owner — log into it instead of creating twitch:xxx
+        const user = twitchData.linked_account
+          ? {
+              username: twitchData.username,
+              avatar: twitchData.avatar,
+              avatarUrl: twitchData.avatarUrl,
+              id: twitchData.id,
+              email: twitchData.email,
+              provider: 'discord',
+              twitch_username: twitchData.twitch_username,
+              linkedTwitch: twitchData.twitch_username,
+            } as any
+          : {
+              username: twitchData.username,
+              avatar: twitchData.avatar,
+              avatarUrl: twitchData.avatarUrl,
+              id: twitchData.id,
+              email: twitchData.email,
+              provider: 'twitch',
+              twitch_username: twitchData.twitch_username,
+            } as any;
         this.user.set(user);
         this.userAvatar.set(twitchData.avatarUrl || 'https://cdn.discordapp.com/embed/avatars/0.png');
         localStorage.setItem('user_profile', JSON.stringify(user));

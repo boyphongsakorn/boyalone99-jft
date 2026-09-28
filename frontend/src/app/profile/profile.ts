@@ -69,6 +69,11 @@ export class Profile implements OnInit {
         if (profile) {
           this.email.set(profile.email || '');
           this.epicUsername.set(profile.epic_username || '');
+          // DB is source of truth for links — show linked even if localStorage missed it
+          if (profile.twitch_id || profile.twitch_username) {
+            this.linkedTwitch.set(profile.twitch_username || 'Linked');
+            try { localStorage.setItem('linked_twitch', profile.twitch_username || 'Linked'); } catch { /* ignore */ }
+          }
         }
       } catch (e) {
         console.error('Failed to fetch profile from database', e);
