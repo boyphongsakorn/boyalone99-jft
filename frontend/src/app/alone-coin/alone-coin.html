@@ -70,6 +70,18 @@
         <div>
           <h3>บูสต์เซิร์ฟเวอร์ Discord</h3>
           <p>ช่วยบูสต์เซิร์ฟเวอร์ Discord ของเราเพื่อให้ชุมชนเติบโต</p>
+          <div class="claim-row">
+            @if (!isLoggedIn()) {
+              <a class="claim-btn" routerLink="/login">ล็อกอินเพื่อรับ</a>
+            } @else {
+              <button type="button" class="claim-btn primary" (click)="claim('booster')" [disabled]="boosterClaimed() || checking()">
+                {{ boosterClaimed() ? 'รับแล้ว ✓' : 'รับ +150 AC (Booster)' }}
+              </button>
+            }
+          </div>
+          @if (hasBooster() === false && isLoggedIn()) {
+            <p class="claim-hint">ยังไม่มียศ Server Booster — บูสต์เซิร์ฟเวอร์ก่อนแล้วกดรับอีกครั้ง</p>
+          }
         </div>
         <strong>+150 AC</strong>
       </li>
@@ -79,6 +91,18 @@
         <div>
           <h3>รับยศ LFG</h3>
           <p>รับยศ LFG ใน BoyAlone99 เพื่อหาตี้เล่นด้วยกันได้ง่ายขึ้น</p>
+          <div class="claim-row">
+            @if (!isLoggedIn()) {
+              <a class="claim-btn" routerLink="/login">ล็อกอินเพื่อรับ</a>
+            } @else {
+              <button type="button" class="claim-btn primary" (click)="claim('lfg')" [disabled]="lfgClaimed() || checking()">
+                {{ lfgClaimed() ? 'รับแล้ว ✓' : 'รับ +100 AC (LFG)' }}
+              </button>
+            }
+          </div>
+          @if (hasLfg() === false && isLoggedIn()) {
+            <p class="claim-hint">ยังไม่มียศ LFG — รับยศใน Discord ก่อนแล้วกดรับอีกครั้ง</p>
+          }
         </div>
         <strong>+100 AC</strong>
       </li>

@@ -370,29 +370,93 @@ app.get('/follow/youtube', async (req, res) => {
   }
 });
 
+// Check Discord roles (Booster / LFG) via bot token
+// GET /discord/roles?userId=<discord id>
+app.get('/discord/roles', async (req, res) => {
+  try {
+    const userId = req.query.userId ? String(req.query.userId) : null;
+    if (!userId) return res.status(400).json({ error: 'Missing userId' });
+    const guildId = process.env.DISCORD_GUILD_ID;
+    const botToken = process.env.DISCORD_BOT_TOKEN;
+    const boosterRole = process.env.DISCORD_BOOSTER_ROLE_ID || '1548408109456826519';
+    const lfgRole = process.env.DISCORD_LFG_ROLE_ID || '1543368029063217193';
+    if (!guildId || !botToken) return res.status(500).json({ error: 'DISCORD_GUILD_ID / DISCORD_BOT_TOKEN not configured' });
+    let roles = [];
+    try {
+      const memberRes = await axios.get(`https://discord.com/api/v10/guilds/${guildId}/members/${userId}`, {
+        headers: { Authorization: `Bot ${botToken}` },
+      });
+      roles = memberRes.data?.roles || [];
+    } catch (e) {
+      if (e.response?.status === 404) return res.json({ inGuild: false, booster: false, lfg: false });
+      throw e;
+    }
+    let claimedBooster = false;
+    let claimedLfg = false;
+    try {
+      const [rows] = await pool.query('SELECT platform FROM claimed_follows WHERE user_id = ? AND platform IN (?, ?)', [userId, 'booster', 'lfg']);
+      for (const r of rows) {
+        if (r.platform === 'booster') claimedBooster = true;
+        if (r.platform === 'lfg') claimedLfg = true;
+      }
+    } catch { /* ignore claimed lookup */ }
+    res.json({
+      inGuild: true,
+      booster: roles.includes(boosterRole),
+      lfg: roles.includes(lfgRole),
+      claimedBooster,
+      claimedLfg,
+    });
+  } catch (error) {
+    console.error('Discord Roles Error:', error.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to check Discord roles' });
+  }
+});
+
 // Claim +100 AC for following (manual check + one-claim guard)
 // ponytail: no Helix call — users/follows is deprecated and needs follower token; require linked twitch_id + claimed_follows PK covers it
-// POST /claim/follow { userId, platform: 'twitch' | 'youtube' }
+// POST /claim/follow { userId, platform: 'twitch' | 'youtube' | 'booster' | 'lfg' }
 app.post('/claim/follow', async (req, res) => {
   try {
     const { userId, platform } = req.body;
-    if (!userId || !['twitch', 'youtube'].includes(platform)) {
-      return res.status(400).json({ error: 'userId and platform (twitch|youtube) required' });
+    if (!userId || !['twitch', 'youtube', 'booster', 'lfg'].includes(platform)) {
+      return res.status(400).json({ error: 'userId and platform (twitch|youtube|booster|lfg) required' });
     }
+    const amounts = { twitch: 100, youtube: 100, booster: 150, lfg: 100 };
+    const amount = amounts[platform];
     const [claimed] = await pool.query('SELECT 1 FROM claimed_follows WHERE user_id = ? AND platform = ?', [userId, platform]);
     if (claimed.length > 0) return res.status(400).json({ error: 'Already claimed' });
     if (platform === 'twitch') {
       const [users] = await pool.query('SELECT twitch_id FROM users WHERE id = ?', [userId]);
       if (users.length === 0 || !users[0].twitch_id) return res.status(400).json({ error: 'Twitch not linked' });
     }
-    await pool.query('UPDATE users SET alone_coin = alone_coin + 100 WHERE id = ?', [userId]);
+    if (platform === 'booster' || platform === 'lfg') {
+      const guildId = process.env.DISCORD_GUILD_ID;
+      const botToken = process.env.DISCORD_BOT_TOKEN;
+      const boosterRole = process.env.DISCORD_BOOSTER_ROLE_ID || '1548408109456826519';
+      const lfgRole = process.env.DISCORD_LFG_ROLE_ID || '1543368029063217193';
+      if (!guildId || !botToken) return res.status(500).json({ error: 'DISCORD_GUILD_ID / DISCORD_BOT_TOKEN not configured' });
+      let roles = [];
+      try {
+        const memberRes = await axios.get(`https://discord.com/api/v10/guilds/${guildId}/members/${userId}`, {
+          headers: { Authorization: `Bot ${botToken}` },
+        });
+        roles = memberRes.data?.roles || [];
+      } catch (e) {
+        if (e.response?.status === 404) return res.status(400).json({ error: 'Join the Discord server first' });
+        throw e;
+      }
+      const need = platform === 'booster' ? boosterRole : lfgRole;
+      if (!roles.includes(need)) return res.status(400).json({ error: platform === 'booster' ? 'Server Booster role not found' : 'LFG role not found' });
+    }
+    await pool.query('UPDATE users SET alone_coin = alone_coin + ? WHERE id = ?', [amount, userId]);
     await pool.query('INSERT INTO claimed_follows (user_id, platform) VALUES (?, ?)', [userId, platform]);
-    await pool.query('INSERT INTO coin_history (user_id, amount, reason) VALUES (?, ?, ?)', [userId, 100, `follow ${platform} +100 AC`]);
+    await pool.query('INSERT INTO coin_history (user_id, amount, reason) VALUES (?, ?, ?)', [userId, amount, `follow ${platform} +${amount} AC`]);
     const [rows] = await pool.query('SELECT alone_coin FROM users WHERE id = ?', [userId]);
     res.json({ balance: rows[0]?.alone_coin ?? 0 });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'Already claimed' });
-    console.error('Claim Error:', error.message);
+    console.error('Claim Error:', error.response?.data || error.message);
     res.status(500).json({ error: 'Failed to claim' });
   }
 });
