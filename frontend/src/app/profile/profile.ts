@@ -38,13 +38,19 @@ export class Profile implements OnInit {
         const parsed = JSON.parse(savedUser);
         userId = parsed.id || null;
         this.email.set(parsed.email || '');
-        this.epicUsername.set(parsed.username || '');
-        if (parsed.avatar) {
+        if (parsed.avatarUrl) {
+          this.userAvatar.set(parsed.avatarUrl);
+        } else if (parsed.avatar) {
           this.userAvatar.set(`https://cdn.discordapp.com/avatars/${parsed.id}/${parsed.avatar}.png`);
         }
-        if (parsed.provider === 'discord' || parsed.id) {
+        if (parsed.provider === 'discord') {
           this.linkedDiscord.set(parsed.username || 'Linked');
+        } else if (parsed.provider === 'twitch') {
+          this.linkedTwitch.set(parsed.twitch_username || parsed.username || 'Linked');
+        } else if (parsed.provider === 'youtube') {
+          this.linkedYoutube.set(parsed.username || 'Linked');
         }
+        if (parsed.linkedDiscord) this.linkedDiscord.set(parsed.linkedDiscord);
         if (parsed.linkedTwitch) this.linkedTwitch.set(parsed.linkedTwitch);
         if (parsed.linkedYoutube) this.linkedYoutube.set(parsed.linkedYoutube);
         // Check separate linked socials
@@ -62,7 +68,7 @@ export class Profile implements OnInit {
         const profile: any = await this.http.get(`${environment.apiUrl}/users/${encodeURIComponent(userId)}`).toPromise();
         if (profile) {
           this.email.set(profile.email || '');
-          this.epicUsername.set(profile.epic_username || profile.username || '');
+          this.epicUsername.set(profile.epic_username || '');
         }
       } catch (e) {
         console.error('Failed to fetch profile from database', e);
