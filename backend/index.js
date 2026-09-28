@@ -376,20 +376,21 @@ app.get('/auth/twitch/callback', async (req, res) => {
         linked_account: true,
       });
     }
-    // Login mode: use twitch:ID as primary key
+    // Login mode: use twitch:ID as primary key — never overwrite email on login
     const userId = `twitch:${twitchUser.id}`;
     await pool.query(
       `INSERT INTO users (id, username, email, avatar, alone_coin, twitch_id, twitch_username)
        VALUES (?, ?, ?, ?, 0, ?, ?)
-       ON DUPLICATE KEY UPDATE username = VALUES(username), email = VALUES(email), avatar = VALUES(avatar), twitch_id = VALUES(twitch_id), twitch_username = VALUES(twitch_username)`,
+       ON DUPLICATE KEY UPDATE username = VALUES(username), avatar = VALUES(avatar), twitch_id = VALUES(twitch_id), twitch_username = VALUES(twitch_username)`,
       [userId, twitchUser.display_name || twitchUser.login, twitchUser.email || null, twitchUser.profile_image_url || null, twitchUser.id, twitchUser.login]
     );
+    const [twRows] = await pool.query('SELECT email FROM users WHERE id = ?', [userId]);
     res.json({
       username: twitchUser.display_name || twitchUser.login,
       avatar: null,
       avatarUrl: twitchUser.profile_image_url || null,
       id: userId,
-      email: twitchUser.email || null,
+      email: twRows[0]?.email ?? twitchUser.email ?? null,
       provider: 'twitch',
       twitch_id: twitchUser.id,
       twitch_username: twitchUser.login,
@@ -564,20 +565,21 @@ app.get('/auth/discord/callback', async (req, res) => {
 
     const discordUser = userResponse.data;
 
-    // 3. Save/Update user in MySQL
+    // 3. Save/Update user in MySQL — never overwrite email on login
     await pool.query(
       `INSERT INTO users (id, username, email, avatar, alone_coin)
        VALUES (?, ?, ?, ?, 0)
-       ON DUPLICATE KEY UPDATE username = VALUES(username), email = VALUES(email), avatar = VALUES(avatar)`,
+       ON DUPLICATE KEY UPDATE username = VALUES(username), avatar = VALUES(avatar)`,
       [discordUser.id, discordUser.username, discordUser.email || null, discordUser.avatar || null]
     );
+    const [dbRows] = await pool.query('SELECT email FROM users WHERE id = ?', [discordUser.id]);
 
     // 4. Send profile back to frontend
     res.json({
       username: discordUser.username,
       avatar: discordUser.avatar,
       id: discordUser.id,
-      email: discordUser.email || null,
+      email: dbRows[0]?.email ?? discordUser.email ?? null,
     });
   } catch (error) {
     console.error('Discord Auth Error:', error.response?.data || error.message);
