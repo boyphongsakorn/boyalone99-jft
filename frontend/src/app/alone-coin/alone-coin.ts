@@ -22,6 +22,8 @@ export class AloneCoin implements OnInit {
   protected readonly hasLfg = signal<boolean | null>(null);
   protected readonly boosterClaimed = signal(false);
   protected readonly lfgClaimed = signal(false);
+  protected readonly channelPending = signal(0);
+  protected readonly channelRedeemable = signal(false);
   protected readonly notice = signal<string | null>(null);
   protected readonly checking = signal(false);
 
@@ -54,10 +56,11 @@ export class AloneCoin implements OnInit {
     if (!id) return;
     this.checking.set(true);
     try {
-      const [tw, yt, roles]: any[] = await Promise.all([
+      const [tw, yt, roles, cp]: any[] = await Promise.all([
         this.http.get(`${environment.apiUrl}/follow/twitch?userId=${encodeURIComponent(id)}`).toPromise(),
         this.http.get(`${environment.apiUrl}/follow/youtube?userId=${encodeURIComponent(id)}`).toPromise(),
         this.http.get(`${environment.apiUrl}/discord/roles?userId=${encodeURIComponent(id)}`).toPromise().catch(() => null),
+        this.http.get(`${environment.apiUrl}/twitch/channel-points?userId=${encodeURIComponent(id)}`).toPromise().catch(() => null),
       ]);
       if (tw?.followUrl) this.twitchUrl.set(tw.followUrl);
       if (yt?.channelUrl) this.youtubeUrl.set(yt.channelUrl);
@@ -76,10 +79,30 @@ export class AloneCoin implements OnInit {
         if (roles.claimedBooster) this.boosterClaimed.set(true);
         if (roles.claimedLfg) this.lfgClaimed.set(true);
       }
+      if (cp) {
+        this.channelRedeemable.set(cp.redeemable === true);
+        this.channelPending.set(cp.pending ?? 0);
+      }
     } catch {
       /* keep defaults, claim will surface error */
     } finally {
       this.checking.set(false);
+    }
+  }
+
+  protected async claimChannelPoints(): Promise<void> {
+    const id = this.userId();
+    if (!id) {
+      this.notice.set('กรุณาล็อกอินก่อนรับเหรียญ');
+      return;
+    }
+    try {
+      const res: any = await this.http.post(`${environment.apiUrl}/claim/channel-points`, { userId: id }).toPromise();
+      this.notice.set(`รับ +${res.granted} AC สำเร็จ! ยอดคงเหลือ ${res.balance} AC`);
+      this.channelRedeemable.set(false);
+      this.channelPending.set(0);
+    } catch (e: any) {
+      this.notice.set(e?.error?.error || 'รับเหรียญไม่สำเร็จ');
     }
   }
 

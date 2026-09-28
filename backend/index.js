@@ -587,6 +587,128 @@ app.get('/auth/discord/callback', async (req, res) => {
   }
 });
 
+// Twitch Channel Points — detect custom reward redemptions and convert to Alone Coin
+// Setup: TWITCH_BROADCASTER_ID + TWITCH_BROADCASTER_TOKEN (broadcaster OAuth with
+// channel:read:redemptions + channel:manage:redemptions) + TWITCH_CHANNEL_REWARD_ID.
+// Get the token via Twitch OAuth (response_type=token) then list IDs via GET /twitch/channel-rewards.
+// ponytail: no EventSub webhook — manual claim flow (user redeems on Twitch, clicks claim, backend verifies + fulfills) covers it without public webhook infra
+const twitchHelix = async (method, path, { params, body } = {}) => {
+  const broadcasterToken = process.env.TWITCH_BROADCASTER_TOKEN;
+  if (!process.env.TWITCH_BROADCASTER_ID || !broadcasterToken) {
+    const e = new Error('TWITCH_BROADCASTER_ID / TWITCH_BROADCASTER_TOKEN not configured');
+    e.status = 500;
+    throw e;
+  }
+  try {
+    const res = await axios({
+      method,
+      url: `https://api.twitch.tv/helix${path}`,
+      params,
+      data: body,
+      headers: { Authorization: `Bearer ${broadcasterToken}`, 'Client-Id': process.env.TWITCH_CLIENT_ID },
+    });
+    return res.data;
+  } catch (e) {
+    if (e.response?.status === 401) {
+      const err = new Error('Broadcaster token expired — re-auth and update TWITCH_BROADCASTER_TOKEN');
+      err.status = 401;
+      throw err;
+    }
+    throw e;
+  }
+};
+
+// List custom channel-point rewards (to find the reward ID to detect)
+// GET /twitch/channel-rewards
+app.get('/twitch/channel-rewards', async (req, res) => {
+  try {
+    const data = await twitchHelix('get', '/channel_points/custom_rewards', {
+      params: { broadcaster_id: process.env.TWITCH_BROADCASTER_ID },
+    });
+    res.json((data.data || []).map((r) => ({ id: r.id, title: r.title, cost: r.cost, is_enabled: r.is_enabled })));
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message || 'Failed to list channel rewards' });
+  }
+});
+
+// Check if linked user has an unclaimed channel-point redemption
+// GET /twitch/channel-points?userId=<main id>
+app.get('/twitch/channel-points', async (req, res) => {
+  try {
+    const userId = req.query.userId ? String(req.query.userId) : null;
+    if (!userId) return res.status(400).json({ error: 'Missing userId' });
+    const [users] = await pool.query('SELECT twitch_id FROM users WHERE id = ?', [userId]);
+    if (users.length === 0 || !users[0].twitch_id) {
+      return res.json({ linked: false, redeemable: false, reason: 'twitch_not_linked' });
+    }
+    const rewardId = process.env.TWITCH_CHANNEL_REWARD_ID;
+    if (!rewardId) return res.status(500).json({ error: 'TWITCH_CHANNEL_REWARD_ID not configured' });
+    const data = await twitchHelix('get', '/channel_points/custom_rewards/redemptions', {
+      params: {
+        broadcaster_id: process.env.TWITCH_BROADCASTER_ID,
+        reward_id: rewardId,
+        status: 'UNFULFILLED',
+        first: 50,
+      },
+    });
+    const mine = (data.data || []).filter((r) => r.user_id === users[0].twitch_id);
+    res.json({ linked: true, redeemable: mine.length > 0, pending: mine.length });
+  } catch (error) {
+    console.error('Channel Points Check Error:', error.response?.data || error.message);
+    res.status(error.status || 500).json({ error: error.message || 'Failed to check channel points' });
+  }
+});
+
+// Claim one redemption -> grant AC + mark FULFILLED on Twitch (prevents double-spend)
+// POST /claim/channel-points { userId }
+app.post('/claim/channel-points', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+    const [users] = await pool.query('SELECT twitch_id FROM users WHERE id = ?', [userId]);
+    if (users.length === 0 || !users[0].twitch_id) return res.status(400).json({ error: 'Twitch not linked' });
+    const rewardId = process.env.TWITCH_CHANNEL_REWARD_ID;
+    if (!rewardId) return res.status(500).json({ error: 'TWITCH_CHANNEL_REWARD_ID not configured' });
+    const amount = Number(process.env.CHANNEL_POINTS_AC || 100);
+    const data = await twitchHelix('get', '/channel_points/custom_rewards/redemptions', {
+      params: {
+        broadcaster_id: process.env.TWITCH_BROADCASTER_ID,
+        reward_id: rewardId,
+        status: 'UNFULFILLED',
+        first: 50,
+      },
+    });
+    const redemption = (data.data || []).find((r) => r.user_id === users[0].twitch_id);
+    if (!redemption) return res.status(400).json({ error: 'No unclaimed channel-point reward found — redeem it on Twitch first' });
+    const [dup] = await pool.query('SELECT 1 FROM channel_point_claims WHERE redemption_id = ?', [redemption.id]);
+    if (dup.length > 0) return res.status(400).json({ error: 'Already claimed' });
+    await pool.query('UPDATE users SET alone_coin = alone_coin + ? WHERE id = ?', [amount, userId]);
+    await pool.query(
+      'INSERT INTO channel_point_claims (redemption_id, user_id, twitch_id, granted_ac) VALUES (?, ?, ?, ?)',
+      [redemption.id, userId, users[0].twitch_id, amount]
+    );
+    await pool.query('INSERT INTO coin_history (user_id, amount, reason) VALUES (?, ?, ?)', [
+      userId,
+      amount,
+      `twitch channel points +${amount} AC`,
+    ]);
+    await twitchHelix('patch', '/channel_points/custom_rewards/redemptions', {
+      params: {
+        broadcaster_id: process.env.TWITCH_BROADCASTER_ID,
+        reward_id: rewardId,
+        id: redemption.id,
+      },
+      body: { status: 'FULFILLED' },
+    }).catch(() => null);
+    const [rows] = await pool.query('SELECT alone_coin FROM users WHERE id = ?', [userId]);
+    res.json({ balance: rows[0]?.alone_coin ?? 0, granted: amount });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'Already claimed' });
+    console.error('Channel Points Claim Error:', error.response?.data || error.message);
+    res.status(error.status || 500).json({ error: error.message || 'Failed to claim channel points' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
 });

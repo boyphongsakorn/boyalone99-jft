@@ -26,6 +26,20 @@
         <div>
           <h3>แต้มช่อง Twitch</h3>
           <p>แลกแต้มช่องที่สะสมมาเป็นเหรียญชุมชน</p>
+          <div class="claim-row">
+            @if (!isLoggedIn()) {
+              <a class="claim-btn" routerLink="/login">ล็อกอินเพื่อรับ</a>
+            } @else {
+              <button type="button" class="claim-btn primary" (click)="claimChannelPoints()" [disabled]="!channelRedeemable() || checking()">
+                {{ channelPending() > 0 ? 'รับ AC (มี ' + channelPending() + ' รางวัลรอรับ)' : 'รับ AC (Channel Points)' }}
+              </button>
+            }
+          </div>
+          @if (!twitchLinked() && isLoggedIn()) {
+            <p class="claim-hint">ยังไม่ได้เชื่อม Twitch — ไปที่ <a routerLink="/profile">โปรไฟล์ → Link Twitch</a> ก่อน แล้วกดรับอีกครั้ง</p>
+          } @else if (isLoggedIn() && !channelRedeemable()) {
+            <p class="claim-hint">ยังไม่พบรางวัลที่แลกไว้ — ไปแลก Channel Points reward บน Twitch ก่อน แล้วกดรับอีกครั้ง</p>
+          }
         </div>
         <strong>1000 pts = 100 AC</strong>
       </li>

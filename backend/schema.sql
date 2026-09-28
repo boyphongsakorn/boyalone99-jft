@@ -37,6 +37,16 @@ CREATE TABLE IF NOT EXISTS redemption_history (
     FOREIGN KEY (reward_id) REFERENCES rewards(id)
 );
 
+-- Channel-point redemptions already converted to AC (prevents double-spend)
+CREATE TABLE IF NOT EXISTS channel_point_claims (
+    redemption_id VARCHAR(255) PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,
+    twitch_id VARCHAR(255) NOT NULL,
+    granted_ac INT NOT NULL,
+    claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
 -- Claimed follow rewards (one claim per user per platform)
 CREATE TABLE IF NOT EXISTS claimed_follows (
     user_id VARCHAR(255) NOT NULL,
