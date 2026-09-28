@@ -56,13 +56,17 @@ app.get('/rewards', async (req, res) => {
   }
 });
 
-// Public settings (claim toggle)
+// Public settings (claim toggle + alert bar)
 app.get('/settings', async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT `key`, `value` FROM settings');
     const settings = {};
     for (const r of rows) settings[r.key] = r.value;
-    res.json({ claim_enabled: settings.claim_enabled !== '0' });
+    res.json({
+      claim_enabled: settings.claim_enabled !== '0',
+      alert_enabled: settings.alert_enabled === '1',
+      alert_message: settings.alert_message || '',
+    });
   } catch (error) {
     console.error('Database Error:', error);
     res.status(500).json({ error: 'Failed to fetch settings' });

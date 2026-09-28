@@ -52,6 +52,8 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 
 INSERT IGNORE INTO settings (`key`, `value`) VALUES ('claim_enabled', '1');
+INSERT IGNORE INTO settings (`key`, `value`) VALUES ('alert_enabled', '0');
+INSERT IGNORE INTO settings (`key`, `value`) VALUES ('alert_message', '');
 
 -- Coin Transaction History Table
 CREATE TABLE IF NOT EXISTS coin_history (

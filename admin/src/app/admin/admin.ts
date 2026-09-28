@@ -34,6 +34,8 @@ interface AdminUser {
 export class Admin implements OnInit {
   protected readonly tab = signal<'rewards' | 'users' | 'history' | 'settings'>('rewards');
   protected readonly claimEnabled = signal(true);
+  protected readonly alertEnabled = signal(false);
+  protected alertMessage = '';
   protected readonly rewards = signal<AdminReward[]>([]);
   protected readonly users = signal<AdminUser[]>([]);
   protected readonly redemptions = signal<any[]>([]);
@@ -78,6 +80,26 @@ export class Admin implements OnInit {
     }
   }
 
+  protected async toggleAlert(): Promise<void> {
+    const next = !this.alertEnabled();
+    try {
+      await this.http.put(`${environment.apiUrl}/admin/settings/alert_enabled`, { value: next ? '1' : '0' }).toPromise();
+      this.alertEnabled.set(next);
+      this.notice.set(next ? 'Alert bar enabled' : 'Alert bar disabled');
+    } catch {
+      this.notice.set('Failed to update alert');
+    }
+  }
+
+  protected async saveAlert(): Promise<void> {
+    try {
+      await this.http.put(`${environment.apiUrl}/admin/settings/alert_message`, { value: this.alertMessage }).toPromise();
+      this.notice.set('Announcement saved');
+    } catch {
+      this.notice.set('Failed to save announcement');
+    }
+  }
+
   protected logout(): void {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('admin_token');
@@ -102,6 +124,10 @@ export class Admin implements OnInit {
       if (settings) {
         const row: any = (settings as any[]).find((s: any) => s.key === 'claim_enabled');
         this.claimEnabled.set(!row || row.value !== '0');
+        const alertRow: any = (settings as any[]).find((s: any) => s.key === 'alert_enabled');
+        this.alertEnabled.set(alertRow?.value === '1');
+        const msgRow: any = (settings as any[]).find((s: any) => s.key === 'alert_message');
+        this.alertMessage = msgRow?.value || '';
       }
     } catch (e) {
       console.error(e);

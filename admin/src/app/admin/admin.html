@@ -157,6 +157,19 @@
           <span class="knob"></span>
         </button>
       </div>
+      <div class="setting-row" style="margin-top: 12px;">
+        <span class="setting-info">
+          <b>Alert bar</b>
+          <small>{{ alertEnabled() ? 'Announcement visible on frontend' : 'Announcement hidden' }}</small>
+        </span>
+        <button type="button" role="switch" [attr.aria-checked]="alertEnabled()" class="switch" [class.on]="alertEnabled()" (click)="toggleAlert()">
+          <span class="knob"></span>
+        </button>
+      </div>
+      <label style="margin-top: 12px;">Announcement message<textarea [(ngModel)]="alertMessage" rows="2" placeholder="e.g. Server maintenance tonight 22:00"></textarea></label>
+      <div class="form-actions">
+        <button type="button" class="primary" (click)="saveAlert()">Save announcement</button>
+      </div>
     </section>
   }
 
