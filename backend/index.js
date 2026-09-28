@@ -277,6 +277,46 @@ app.get('/balance/:userId', async (req, res) => {
   }
 });
 
+// Get user profile (email + epic username from DB)
+// GET /users/:id
+app.get('/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows] = await pool.query(
+      'SELECT id, username, email, avatar, alone_coin, epic_username, twitch_id, twitch_username FROM users WHERE id = ?',
+      [id]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'User not found' });
+    res.json(rows[0]);
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to fetch profile' });
+  }
+});
+
+// Update user profile (email + epic username saved to DB)
+// PUT /users/:id { email, epic_username }
+app.put('/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { email, epic_username } = req.body;
+    await pool.query('UPDATE users SET email = ?, epic_username = ? WHERE id = ?', [
+      email || null,
+      epic_username || null,
+      id,
+    ]);
+    const [rows] = await pool.query(
+      'SELECT id, username, email, avatar, alone_coin, epic_username, twitch_id, twitch_username FROM users WHERE id = ?',
+      [id]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'User not found' });
+    res.json(rows[0]);
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
 // OAuth Callback Handler - Twitch (login or link)
 app.get('/auth/twitch/callback', async (req, res) => {
   const code = req.query.code;

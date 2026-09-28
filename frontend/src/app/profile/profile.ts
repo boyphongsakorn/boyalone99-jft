@@ -12,8 +12,8 @@ import { environment } from '../../environments/environment';
   styleUrl: './profile.css',
 })
 export class Profile implements OnInit {
-  protected email = signal('user@example.com');
-  protected epicUsername = signal('EpicPlayer123');
+  protected email = signal('');
+  protected epicUsername = signal('');
   protected userAvatar = signal('https://cdn.discordapp.com/embed/avatars/0.png');
   protected isEditing = signal(false);
   protected saveStatus = signal<'idle' | 'saving' | 'saved'>('idle');
@@ -28,11 +28,13 @@ export class Profile implements OnInit {
 
     // Try to load profile from local session first
     const savedUser = localStorage.getItem('user_profile');
+    let userId: string | null = null;
     if (savedUser) {
       try {
         const parsed = JSON.parse(savedUser);
-        this.email.set(parsed.email || 'user@example.com');
-        this.epicUsername.set(parsed.username || 'EpicPlayer123');
+        userId = parsed.id || null;
+        this.email.set(parsed.email || '');
+        this.epicUsername.set(parsed.username || '');
         if (parsed.avatar) {
           this.userAvatar.set(`https://cdn.discordapp.com/avatars/${parsed.id}/${parsed.avatar}.png`);
         }
@@ -48,6 +50,18 @@ export class Profile implements OnInit {
         if (youtube) this.linkedYoutube.set(youtube);
       } catch (e) {
         console.error('Failed to parse saved profile', e);
+      }
+    }
+    // Then load real data from database
+    if (userId) {
+      try {
+        const profile: any = await this.http.get(`${environment.apiUrl}/users/${encodeURIComponent(userId)}`).toPromise();
+        if (profile) {
+          this.email.set(profile.email || '');
+          this.epicUsername.set(profile.epic_username || profile.username || '');
+        }
+      } catch (e) {
+        console.error('Failed to fetch profile from database', e);
       }
     }
   }
@@ -119,14 +133,27 @@ export class Profile implements OnInit {
     }
   }
 
-  protected saveProfile(): void {
+  protected async saveProfile(): Promise<void> {
     this.saveStatus.set('saving');
-    // Mock API call
-    setTimeout(() => {
+    try {
+      const saved = localStorage.getItem('user_profile');
+      const userId = saved ? (JSON.parse(saved).id || '') : '';
+      if (!userId) throw new Error('Not logged in');
+      const updated: any = await this.http.put(`${environment.apiUrl}/users/${encodeURIComponent(userId)}`, {
+        email: this.email(),
+        epic_username: this.epicUsername(),
+      }).toPromise();
+      if (updated) {
+        this.email.set(updated.email || '');
+        this.epicUsername.set(updated.epic_username || '');
+      }
       this.saveStatus.set('saved');
       this.isEditing.set(false);
       setTimeout(() => this.saveStatus.set('idle'), 3000);
-    }, 1000);
+    } catch (e) {
+      console.error('Failed to save profile', e);
+      this.saveStatus.set('idle');
+    }
   }
 
   protected logout(): void {
