@@ -707,6 +707,46 @@ const twitchHelix = async (method, path, { params, body, retry = true } = {}) =>
   }
 };
 
+// App access token (client_credentials) — EventSub webhook subscribe/list requires this,
+// NOT the broadcaster user token. Cached until expiry.
+let appToken = null;
+let appTokenExp = 0;
+const getTwitchAppToken = async () => {
+  if (appToken && Date.now() < appTokenExp - 60000) return appToken;
+  const cid = process.env.TWITCH_CLIENT_ID;
+  const csec = process.env.TWITCH_CLIENT_SECRET;
+  if (!cid || cid.startsWith('your_') || !csec || csec.startsWith('your_'))
+    throw Object.assign(new Error('TWITCH_CLIENT_ID / TWITCH_CLIENT_SECRET not configured — needed for EventSub app token'), { status: 500 });
+  const res = await axios.post('https://id.twitch.tv/oauth2/token', new URLSearchParams({
+    client_id: cid,
+    client_secret: csec,
+    grant_type: 'client_credentials',
+  }), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 8000 });
+  appToken = res.data.access_token;
+  appTokenExp = Date.now() + (Number(res.data.expires_in || 3600) * 1000);
+  return appToken;
+};
+
+const twitchHelixApp = async (method, path, { params, body } = {}) => {
+  const token = await getTwitchAppToken();
+  try {
+    const res = await axios({
+      method,
+      url: `https://api.twitch.tv/helix${path}`,
+      params,
+      data: body,
+      timeout: 7000,
+      headers: { Authorization: `Bearer ${token}`, 'Client-Id': process.env.TWITCH_CLIENT_ID },
+    });
+    return res.data;
+  } catch (e) {
+    if (e.code === 'ECONNABORTED' || e.code === 'ETIMEDOUT' || e.response?.status === 408) {
+      throw Object.assign(new Error('Twitch timed out after 7s — try again'), { status: 504 });
+    }
+    throw e;
+  }
+};
+
 // List custom channel-point rewards (to find the reward ID to detect)
 // GET /twitch/channel-rewards
 app.get('/twitch/channel-rewards', async (req, res) => {
@@ -877,7 +917,7 @@ app.post('/eventsub/subscribe', checkAdminAuth, async (req, res) => {
     const base = (process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
     if (!base.startsWith('https://')) return res.status(500).json({ error: 'PUBLIC_BASE_URL must be https://...' });
     const rewardId = process.env.TWITCH_CHANNEL_REWARD_ID;
-    const data = await twitchHelix('post', '/eventsub/subscriptions', {
+    const data = await twitchHelixApp('post', '/eventsub/subscriptions', {
       body: {
         type: 'channel.channel_points_custom_reward_redemption.add',
         version: '1',
@@ -899,7 +939,7 @@ app.post('/eventsub/subscribe', checkAdminAuth, async (req, res) => {
 // List active EventSub subscriptions — GET /eventsub/subscriptions (admin)
 app.get('/eventsub/subscriptions', checkAdminAuth, async (req, res) => {
   try {
-    res.json(await twitchHelix('get', '/eventsub/subscriptions', {}));
+    res.json(await twitchHelixApp('get', '/eventsub/subscriptions', {}));
   } catch (error) {
     const upstream = error.response?.status;
     res.status(upstream === 408 ? 504 : upstream || error.status || 500).json({ error: error.response?.data?.message || error.message || 'Failed to list subscriptions' });
