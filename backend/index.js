@@ -234,7 +234,7 @@ app.delete('/admin/rewards/:id', checkAdminAuth, async (req, res) => {
 app.get('/admin/redemptions', checkAdminAuth, async (req, res) => {
   try {
     const [rows] = await pool.query(
-      `SELECT h.id, h.redeemed_at, u.username, u.id AS user_id, r.title AS reward_title
+      `SELECT h.id, h.reward_id, h.redeemed_at, u.username, u.id AS user_id, r.title AS reward_title, r.cost AS reward_cost
        FROM redemption_history h
        LEFT JOIN users u ON u.id = h.user_id
        LEFT JOIN rewards r ON r.id = h.reward_id
@@ -260,6 +260,64 @@ app.get('/admin/coin-history', checkAdminAuth, async (req, res) => {
   } catch (error) {
     console.error('Database Error:', error);
     res.status(500).json({ error: 'Failed to fetch coin history' });
+  }
+});
+
+// Rollback a coin grant: reverse balance + compensating audit entry (original kept)
+// POST /admin/coin-history/:id/rollback
+app.post('/admin/coin-history/:id/rollback', checkAdminAuth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid id' });
+    const [orig] = await pool.query('SELECT user_id, amount, reason FROM coin_history WHERE id = ?', [id]);
+    if (orig.length === 0) return res.status(404).json({ error: 'Entry not found' });
+    if ((orig[0].reason || '').startsWith('rollback ')) return res.status(400).json({ error: 'Cannot rollback a rollback entry' });
+    const [dup] = await pool.query('SELECT 1 FROM coin_history WHERE reason LIKE ?', [`rollback coin #${id}%`]);
+    if (dup.length > 0) return res.status(409).json({ error: 'Already rolled back' });
+    await pool.query('UPDATE users SET alone_coin = alone_coin - ? WHERE id = ?', [orig[0].amount, orig[0].user_id]);
+    await pool.query('INSERT INTO coin_history (user_id, amount, reason) VALUES (?, ?, ?)', [
+      orig[0].user_id,
+      -orig[0].amount,
+      `rollback coin #${id}: ${orig[0].reason || ''}`.slice(0, 255),
+    ]);
+    const [rows] = await pool.query('SELECT alone_coin FROM users WHERE id = ?', [orig[0].user_id]);
+    res.json({ balance: rows[0]?.alone_coin ?? 0, reverted: -orig[0].amount });
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to rollback' });
+  }
+});
+
+// Rollback a redemption: refund cost, restore stock, delete row + audit entry
+// POST /admin/redemptions/:id/rollback
+app.post('/admin/redemptions/:id/rollback', checkAdminAuth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid id' });
+    const [rows] = await pool.query(
+      `SELECT h.user_id, h.reward_id, r.cost, r.title
+       FROM redemption_history h LEFT JOIN rewards r ON r.id = h.reward_id WHERE h.id = ?`,
+      [id]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'Redemption not found' });
+    const [dup] = await pool.query('SELECT 1 FROM coin_history WHERE reason LIKE ?', [`rollback redeem #${id}%`]);
+    if (dup.length > 0) return res.status(409).json({ error: 'Already rolled back' });
+    const cost = Number(rows[0].cost || 0);
+    if (cost > 0) {
+      await pool.query('UPDATE users SET alone_coin = alone_coin + ? WHERE id = ?', [cost, rows[0].user_id]);
+      await pool.query('INSERT INTO coin_history (user_id, amount, reason) VALUES (?, ?, ?)', [
+        rows[0].user_id,
+        cost,
+        `rollback redeem #${id} ${rows[0].title || ''}`.slice(0, 255),
+      ]);
+    }
+    if (rows[0].reward_id) await pool.query('UPDATE rewards SET stock = stock + 1 WHERE id = ?', [rows[0].reward_id]);
+    await pool.query('DELETE FROM redemption_history WHERE id = ?', [id]);
+    const [bal] = await pool.query('SELECT alone_coin FROM users WHERE id = ?', [rows[0].user_id]);
+    res.json({ balance: bal[0]?.alone_coin ?? 0, refunded: cost });
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to rollback redemption' });
   }
 });
 

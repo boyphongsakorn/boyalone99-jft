@@ -245,6 +245,41 @@ export class Admin implements OnInit {
     }
   }
 
+  protected async rollbackCoin(id: number) {
+    if (typeof window !== 'undefined' && !window.confirm(`Rollback coin entry #${id}? Balance will be reversed.`)) return;
+    try {
+      const res: any = await this.http.post(`${environment.apiUrl}/admin/coin-history/${id}/rollback`, {}).toPromise();
+      this.notice.set(`Rolled back coin #${id} (${res.reverted} AC). New balance ${res.balance} AC`);
+      await this.refreshHistory();
+    } catch (e: any) {
+      this.notice.set(e?.error?.error || 'Rollback failed');
+    }
+  }
+
+  protected async rollbackRedemption(id: number) {
+    if (typeof window !== 'undefined' && !window.confirm(`Rollback redemption #${id}? Cost will be refunded.`)) return;
+    try {
+      const res: any = await this.http.post(`${environment.apiUrl}/admin/redemptions/${id}/rollback`, {}).toPromise();
+      this.notice.set(`Rolled back redeem #${id} (refunded ${res.refunded} AC)`);
+      await this.refreshHistory();
+    } catch (e: any) {
+      this.notice.set(e?.error?.error || 'Rollback failed');
+    }
+  }
+
+  private async refreshHistory(): Promise<void> {
+    try {
+      const [redemptions, coins] = await Promise.all([
+        this.http.get<any[]>(`${environment.apiUrl}/admin/redemptions`).toPromise(),
+        this.http.get<any[]>(`${environment.apiUrl}/admin/coin-history`).toPromise(),
+      ]);
+      if (redemptions) this.redemptions.set(redemptions);
+      if (coins) this.coinHistory.set(coins);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   protected async addCoins(user: AdminUser) {
     const amount = Number(this.coinAmount[user.id] || 0);
     const reason = this.coinReason[user.id] || 'admin grant';

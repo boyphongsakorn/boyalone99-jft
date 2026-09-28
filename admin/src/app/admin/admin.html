@@ -120,10 +120,10 @@
         <h2>Redemptions ({{ redemptions().length }})</h2>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>When</th><th>User</th><th>Reward</th></tr></thead>
+            <thead><tr><th>When</th><th>User</th><th>Reward</th><th></th></tr></thead>
             <tbody>
               @for (h of redemptions(); track h.id) {
-                <tr><td>{{ h.redeemed_at }}</td><td>{{ h.username }}<br /><small>{{ h.user_id }}</small></td><td>{{ h.reward_title }}</td></tr>
+                <tr><td>{{ h.redeemed_at }}</td><td>{{ h.username }}<br /><small>{{ h.user_id }}</small></td><td>{{ h.reward_title }}<br /><small>{{ h.reward_cost }} AC</small></td><td class="actions"><button type="button" class="danger" (click)="rollbackRedemption(h.id)">Rollback</button></td></tr>
               }
             </tbody>
           </table>
@@ -133,10 +133,10 @@
         <h2>Coin history ({{ coinHistory().length }})</h2>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>When</th><th>User</th><th>Amount</th><th>Reason</th></tr></thead>
+            <thead><tr><th>When</th><th>User</th><th>Amount</th><th>Reason</th><th></th></tr></thead>
             <tbody>
               @for (h of coinHistory(); track h.id) {
-                <tr><td>{{ h.created_at }}</td><td>{{ h.username }}</td><td>{{ h.amount }}</td><td>{{ h.reason }}</td></tr>
+                <tr><td>{{ h.created_at }}</td><td>{{ h.username }}</td><td>{{ h.amount }}</td><td>{{ h.reason }}</td><td class="actions"><button type="button" class="danger" (click)="rollbackCoin(h.id)">Rollback</button></td></tr>
               }
             </tbody>
           </table>
