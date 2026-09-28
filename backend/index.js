@@ -334,6 +334,69 @@ app.get('/auth/twitch/callback', async (req, res) => {
   }
 });
 
+// Check if user follows boyalone99 on Twitch
+// ponytail: manual fallback — real Helix check needs follower token (user:read:follows) + broadcaster ID; DB link-check + one-claim guard covers it until then
+// GET /follow/twitch?userId=<main id>
+app.get('/follow/twitch', async (req, res) => {
+  try {
+    const userId = req.query.userId ? String(req.query.userId) : null;
+    if (!userId) return res.status(400).json({ error: 'Missing userId' });
+    const [users] = await pool.query('SELECT twitch_id FROM users WHERE id = ?', [userId]);
+    if (users.length === 0 || !users[0].twitch_id) {
+      return res.json({ following: false, reason: 'twitch_not_linked', followUrl: 'https://www.twitch.tv/boyalone99' });
+    }
+    const [claimed] = await pool.query('SELECT 1 FROM claimed_follows WHERE user_id = ? AND platform = ?', [userId, 'twitch']);
+    res.json({ following: null, reason: 'manual_check_required', followUrl: 'https://www.twitch.tv/boyalone99', claimed: claimed.length > 0 });
+  } catch (error) {
+    console.error('Twitch Follow Check Error:', error.message);
+    res.status(500).json({ error: 'Failed to check Twitch follow' });
+  }
+});
+
+// Check YouTube sub — API key cannot verify viewer, return link + claimed state
+// GET /follow/youtube?userId=<main id>
+app.get('/follow/youtube', async (req, res) => {
+  try {
+    const channelUrl = process.env.YOUTUBE_CHANNEL_URL || (process.env.YOUTUBE_CHANNEL_ID ? `https://www.youtube.com/channel/${process.env.YOUTUBE_CHANNEL_ID}?sub_confirmation=1` : 'https://www.youtube.com/@boyalone99?sub_confirmation=1');
+    const userId = req.query.userId ? String(req.query.userId) : null;
+    let claimed = false;
+    if (userId) {
+      const [rows] = await pool.query('SELECT 1 FROM claimed_follows WHERE user_id = ? AND platform = ?', [userId, 'youtube']);
+      claimed = rows.length > 0;
+    }
+    res.json({ following: null, reason: 'manual_check_required', channelUrl, claimed });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to check YouTube subscription' });
+  }
+});
+
+// Claim +100 AC for following (manual check + one-claim guard)
+// ponytail: no Helix call — users/follows is deprecated and needs follower token; require linked twitch_id + claimed_follows PK covers it
+// POST /claim/follow { userId, platform: 'twitch' | 'youtube' }
+app.post('/claim/follow', async (req, res) => {
+  try {
+    const { userId, platform } = req.body;
+    if (!userId || !['twitch', 'youtube'].includes(platform)) {
+      return res.status(400).json({ error: 'userId and platform (twitch|youtube) required' });
+    }
+    const [claimed] = await pool.query('SELECT 1 FROM claimed_follows WHERE user_id = ? AND platform = ?', [userId, platform]);
+    if (claimed.length > 0) return res.status(400).json({ error: 'Already claimed' });
+    if (platform === 'twitch') {
+      const [users] = await pool.query('SELECT twitch_id FROM users WHERE id = ?', [userId]);
+      if (users.length === 0 || !users[0].twitch_id) return res.status(400).json({ error: 'Twitch not linked' });
+    }
+    await pool.query('UPDATE users SET alone_coin = alone_coin + 100 WHERE id = ?', [userId]);
+    await pool.query('INSERT INTO claimed_follows (user_id, platform) VALUES (?, ?)', [userId, platform]);
+    await pool.query('INSERT INTO coin_history (user_id, amount, reason) VALUES (?, ?, ?)', [userId, 100, `follow ${platform} +100 AC`]);
+    const [rows] = await pool.query('SELECT alone_coin FROM users WHERE id = ?', [userId]);
+    res.json({ balance: rows[0]?.alone_coin ?? 0 });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'Already claimed' });
+    console.error('Claim Error:', error.message);
+    res.status(500).json({ error: 'Failed to claim' });
+  }
+});
+
 // Unlink Twitch from main account
 app.delete('/auth/twitch/link', async (req, res) => {
   try {

@@ -33,6 +33,12 @@ h1 em { color: var(--coral); font-style: normal; }
 .step-card p { color: var(--muted); font-size: .76rem; line-height: 1.5; margin: 0; }
 .step-card strong { font-size: .9rem; white-space: nowrap; }
 .guide-note { align-items: center; background: #fff6d9; border: 1px dashed #b28d31; color: #756023; display: flex; font-size: .78rem; gap: 12px; margin-top: 32px; padding: 11px 15px; }
+.claim-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.claim-btn { background: #fff; border: 2px solid var(--ink); border-radius: 999px; box-shadow: 2px 2px 0 var(--ink); color: var(--ink); cursor: pointer; font: inherit; font-size: .75rem; font-weight: 700; padding: 6px 14px; text-decoration: none; }
+.claim-btn.primary { background: #252525; color: #fff6d9; }
+.claim-btn:disabled { cursor: default; opacity: .5; box-shadow: none; }
+.claim-hint { color: var(--coral) !important; margin-top: 8px !important; }
+.notice { background: #fff; border: 2px solid var(--ink); border-radius: 6px; box-shadow: 3px 3px 0 var(--ink); margin: 18px auto 0; max-width: 920px; padding: 10px 14px; position: relative; z-index: 1; }
 .guide-note span { font-size: 1.3rem; }
 .guide-note p { margin: 0; }
 .guide-footer { border-top: 1px solid var(--line); color: var(--muted); display: flex; font-size: .66rem; justify-content: space-between; margin-top: 62px; padding-top: 14px; }

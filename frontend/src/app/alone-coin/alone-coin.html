@@ -35,6 +35,23 @@
         <div>
           <h3>กดติดตาม & เข้าร่วม</h3>
           <p>แค่กดติดตามช่อง Twitch หรือ YouTube ก็เริ่มสะสมได้เลย</p>
+          <div class="claim-row">
+            @if (!isLoggedIn()) {
+              <a class="claim-btn" routerLink="/login">ล็อกอินเพื่อรับ</a>
+            } @else {
+              <a class="claim-btn" [href]="twitchUrl()" target="_blank" rel="noopener">ติดตาม Twitch</a>
+              <button type="button" class="claim-btn primary" (click)="claim('twitch')" [disabled]="twitchClaimed() || checking()">
+                {{ twitchClaimed() ? 'รับแล้ว ✓' : 'รับ +100 AC (Twitch)' }}
+              </button>
+              <a class="claim-btn" [href]="youtubeUrl()" target="_blank" rel="noopener">ติดตาม YouTube</a>
+              <button type="button" class="claim-btn" (click)="claim('youtube')" [disabled]="youtubeClaimed() || checking()">
+                {{ youtubeClaimed() ? 'รับแล้ว ✓' : 'รับ +100 AC (YouTube)' }}
+              </button>
+            }
+          </div>
+          @if (!twitchLinked() && isLoggedIn()) {
+            <p class="claim-hint">ยังไม่ได้เชื่อม Twitch — ไปที่ <a routerLink="/profile">โปรไฟล์ → Link Twitch</a> ก่อน แล้วกดรับอีกครั้ง</p>
+          }
         </div>
         <strong>+100 AC</strong>
       </li>
@@ -67,6 +84,10 @@
       </li>
     </ol>
   </section>
+
+  @if (notice(); as msg) {
+    <p class="notice" role="status">{{ msg }}</p>
+  }
 
   <aside class="guide-note">
     <span aria-hidden="true">◎</span>

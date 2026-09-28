@@ -36,6 +36,15 @@ CREATE TABLE IF NOT EXISTS redemption_history (
     FOREIGN KEY (reward_id) REFERENCES rewards(id)
 );
 
+-- Claimed follow rewards (one claim per user per platform)
+CREATE TABLE IF NOT EXISTS claimed_follows (
+    user_id VARCHAR(255) NOT NULL,
+    platform VARCHAR(50) NOT NULL,
+    claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, platform),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
 -- Site Settings Table
 CREATE TABLE IF NOT EXISTS settings (
     `key` VARCHAR(255) PRIMARY KEY,
