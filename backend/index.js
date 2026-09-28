@@ -10,7 +10,8 @@ const crypto = require('crypto');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+// Keep raw body for EventSub HMAC verification (Twitch signs the exact bytes)
+app.use(express.json({ verify: (req, _res, buf) => { req.rawBody = buf; } }));
 
 const PORT = process.env.PORT || 3000;
 
@@ -627,43 +628,74 @@ app.get('/auth/discord/callback', async (req, res) => {
 // TWITCH_OAUTH_TOKEN + TWITCH_OAUTH_REFRESH (broadcaster OAuth with
 // channel:read:redemptions + channel:manage:redemptions) + TWITCH_CHANNEL_REWARD_ID.
 // ponytail: no EventSub webhook — manual claim flow (user redeems on Twitch, clicks claim, backend verifies + fulfills) covers it without public webhook infra
-let broadcasterToken = process.env.TWITCH_BROADCASTER_TOKEN || process.env.TWITCH_OAUTH_TOKEN || null;
+let broadcasterToken =
+  process.env.TWITCH_BROADCASTER_TOKEN?.startsWith('paste_') === true
+    ? null
+    : process.env.TWITCH_BROADCASTER_TOKEN || process.env.TWITCH_OAUTH_TOKEN || null;
+if (broadcasterToken?.startsWith('paste_')) broadcasterToken = null;
+// TTG tokens are issued under TTG's client ID — Helix requires that same ID in the header.
+let ttgClientId =
+  process.env.TWITCH_TTG_CLIENT_ID && !process.env.TWITCH_TTG_CLIENT_ID.startsWith('your_')
+    ? process.env.TWITCH_TTG_CLIENT_ID
+    : 'gp762nuuoqcoxypju8c569th9wz7q5';
 
 // Exchange the refresh token for a fresh broadcaster token via twitchtokengenerator.com
 // (generator tokens use TTG's client id, so our TWITCH_CLIENT_SECRET can't refresh them directly)
-const refreshBroadcasterToken = async () => {
+// ponytail: single-flight — concurrent calls share one refresh instead of storming TTG
+let refreshing = null;
+const refreshBroadcasterToken = () => {
+  if (refreshing) return refreshing;
+  refreshing = doRefresh().finally(() => { refreshing = null; });
+  return refreshing;
+};
+const doRefresh = async () => {
   const refreshToken = process.env.TWITCH_OAUTH_REFRESH;
-  if (!refreshToken) throw Object.assign(new Error('TWITCH_OAUTH_REFRESH not configured'), { status: 500 });
-  // const res = await axios.post('https://twitchtokengenerator.com/api/v2/tokens/refresh', {
-  //   refresh_token: refreshToken,
-  // }, { headers: { 'Content-Type': 'application/json', Accept: 'application/json' } });
-  // broadcasterToken = res.data.access_token;
-  const twitchrefresh = await fetch('https://twitchtokengenerator.com/api/refresh/' + process.env.TWITCH_OAUTH_REFRESH);
-  const twitchdata = await twitchrefresh.json();
-  process.env.TWITCH_OAUTH_TOKEN = twitchdata.token ?? twitchdata.access_token;
-  broadcasterToken = process.env.TWITCH_OAUTH_TOKEN;
-  if (twitchdata.refresh_token) process.env.TWITCH_OAUTH_REFRESH = twitchdata.refresh_token;
-  console.log('🔄 Refreshed Twitch broadcaster token: ' + broadcasterToken);
-  return broadcasterToken;
+  if (!refreshToken || refreshToken.startsWith('paste_'))
+    throw Object.assign(new Error('TWITCH_OAUTH_REFRESH not configured — paste it from twitchtokengenerator.com'), { status: 500 });
+  try {
+    const res = await axios.post(
+      'https://twitchtokengenerator.com/api/v2/tokens/refresh',
+      { refresh_token: refreshToken },
+      { headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, timeout: 5000 }
+    );
+    if (!res.data?.access_token) throw new Error('Refresh returned no access_token: ' + JSON.stringify(res.data).slice(0, 200));
+    broadcasterToken = res.data.access_token;
+    process.env.TWITCH_OAUTH_TOKEN = res.data.access_token;
+    if (res.data.refresh_token) process.env.TWITCH_OAUTH_REFRESH = res.data.refresh_token;
+    if (res.data.client_id) ttgClientId = res.data.client_id;
+    console.log('🔄 Refreshed Twitch broadcaster token');
+    return broadcasterToken;
+  } catch (e) {
+    const msg = e.response?.data?.message || e.message;
+    throw Object.assign(new Error('TTG refresh failed: ' + msg), { status: 502 });
+  }
 };
 
 const twitchHelix = async (method, path, { params, body, retry = true } = {}) => {
-  if (!process.env.TWITCH_BROADCASTER_ID) {
-    throw Object.assign(new Error('TWITCH_BROADCASTER_ID not configured'), { status: 500 });
+  if (!process.env.TWITCH_BROADCASTER_ID || process.env.TWITCH_BROADCASTER_ID.startsWith('your_')) {
+    throw Object.assign(new Error('TWITCH_BROADCASTER_ID not configured — set your numeric broadcaster user id'), { status: 500 });
   }
-  // if (!broadcasterToken) await refreshBroadcasterToken();
+  if (!broadcasterToken) await refreshBroadcasterToken();
   try {
     const res = await axios({
       method,
       url: `https://api.twitch.tv/helix${path}`,
       params,
       data: body,
-      headers: { Authorization: `Bearer ${broadcasterToken}`, 'Client-Id': process.env.TWITCH_TTG_CLIENT_ID },
+      timeout: 7000,
+      headers: { Authorization: `Bearer ${broadcasterToken}`, 'Client-Id': ttgClientId },
     });
-    console.log(res.data);
     return res.data;
   } catch (e) {
-    console.error('Twitch Helix Error:', e.response?.data || e.message);
+    if (e.code === 'ECONNABORTED' || e.code === 'ETIMEDOUT' || e.response?.status === 408) {
+      throw Object.assign(new Error('Twitch timed out after 7s — try again'), { status: 504 });
+    }
+    if (e.response?.status === 403) {
+      throw Object.assign(
+        new Error('Twitch rejected Client-Id: query with the client ID that created the reward, or check affiliate/partner status.'),
+        { status: 403 }
+      );
+    }
     if (e.response?.status === 401 && retry) {
       await refreshBroadcasterToken();
       return twitchHelix(method, path, { params, body, retry: false });
@@ -684,7 +716,9 @@ app.get('/twitch/channel-rewards', async (req, res) => {
     });
     res.json((data.data || []).map((r) => ({ id: r.id, title: r.title, cost: r.cost, is_enabled: r.is_enabled })));
   } catch (error) {
-    res.status(error.status || 500).json({ error: error.message || 'Failed to list channel rewards' });
+    console.error('Channel Rewards Error:', error.response?.data || error.message);
+    const upstream = error.response?.status;
+    res.status(upstream === 408 ? 504 : upstream || error.status || 500).json({ error: error.response?.data?.message || error.message || 'Failed to list channel rewards' });
   }
 });
 
@@ -712,7 +746,8 @@ app.get('/twitch/channel-points', async (req, res) => {
     res.json({ linked: true, redeemable: mine.length > 0, pending: mine.length });
   } catch (error) {
     console.error('Channel Points Check Error:', error.response?.data || error.message);
-    res.status(error.status || 500).json({ error: error.message || 'Failed to check channel points' });
+    const upstream = error.response?.status;
+    res.status(upstream === 408 ? 504 : upstream || error.status || 500).json({ error: error.response?.data?.message || error.message || 'Failed to check channel points' });
   }
 });
 
@@ -762,7 +797,112 @@ app.post('/claim/channel-points', async (req, res) => {
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'Already claimed' });
     console.error('Channel Points Claim Error:', error.response?.data || error.message);
-    res.status(error.status || 500).json({ error: error.message || 'Failed to claim channel points' });
+    const upstream = error.response?.status;
+    res.status(upstream === 408 ? 504 : upstream || error.status || 500).json({ error: error.response?.data?.message || error.message || 'Failed to claim channel points' });
+  }
+});
+
+// Twitch EventSub — listening way: Twitch pushes redemption.add events to POST /eventsub,
+// backend auto-grants AC + fulfills. Setup: PUBLIC_BASE_URL (public https) +
+// TWITCH_EVENTSUB_SECRET (10-100 chars) + broadcaster token with channel:read:redemptions
+// (+ channel:manage:redemptions to auto-fulfill). Subscribe once via POST /eventsub/subscribe.
+const verifyEventSub = (req) => {
+  const secret = process.env.TWITCH_EVENTSUB_SECRET;
+  if (!secret) return false;
+  const id = req.headers['twitch-eventsub-message-id'] || '';
+  const ts = req.headers['twitch-eventsub-message-timestamp'] || '';
+  const sig = req.headers['twitch-eventsub-message-signature'] || '';
+  const raw = req.rawBody ? req.rawBody.toString() : JSON.stringify(req.body);
+  const expected = 'sha256=' + crypto.createHmac('sha256', secret).update(id + ts + raw).digest('hex');
+  const a = Buffer.from(expected);
+  const b = Buffer.from(sig);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+};
+
+const grantChannelPoints = async ({ redemptionId, twitchUserId }) => {
+  const amount = Number(process.env.CHANNEL_POINTS_AC || 100);
+  const [users] = await pool.query('SELECT id FROM users WHERE twitch_id = ?', [twitchUserId]);
+  if (users.length === 0) return { granted: false, reason: 'twitch_not_linked' };
+  // PK on redemption_id is the dedup lock — concurrent retries can't double-grant
+  try {
+    await pool.query(
+      'INSERT INTO channel_point_claims (redemption_id, user_id, twitch_id, granted_ac) VALUES (?, ?, ?, ?)',
+      [redemptionId, users[0].id, twitchUserId, amount]
+    );
+  } catch (e) {
+    if (e.code === 'ER_DUP_ENTRY') return { granted: false, reason: 'duplicate' };
+    throw e;
+  }
+  await pool.query('UPDATE users SET alone_coin = alone_coin + ? WHERE id = ?', [amount, users[0].id]);
+  await pool.query('INSERT INTO coin_history (user_id, amount, reason) VALUES (?, ?, ?)', [
+    users[0].id,
+    amount,
+    `twitch channel points +${amount} AC`,
+  ]);
+  await twitchHelix('patch', '/channel_points/custom_rewards/redemptions', {
+    params: { broadcaster_id: process.env.TWITCH_BROADCASTER_ID, reward_id: process.env.TWITCH_CHANNEL_REWARD_ID, id: redemptionId },
+    body: { status: 'FULFILLED' },
+  }).catch((e) => console.error('Fulfill failed:', e.response?.data || e.message));
+  return { granted: true, userId: users[0].id, amount };
+};
+
+app.post('/eventsub', async (req, res) => {
+  if (!verifyEventSub(req)) return res.sendStatus(403);
+  const type = req.headers['twitch-eventsub-message-type'];
+  if (type === 'webhook_callback_verification') return res.status(200).send(req.body.challenge);
+  if (type === 'revocation') {
+    console.error('EventSub revoked:', req.body?.subscription?.type);
+    return res.sendStatus(200);
+  }
+  res.sendStatus(200); // ack fast (Twitch requires <10s), grant in background
+  try {
+    if (req.body?.subscription?.type !== 'channel.channel_points_custom_reward_redemption.add') return;
+    const ev = req.body.event || {};
+    const configured = process.env.TWITCH_CHANNEL_REWARD_ID;
+    if (configured && !configured.startsWith('your_') && ev.reward?.id !== configured) return;
+    if (ev.status && ev.status !== 'unfulfilled') return;
+    await grantChannelPoints({ redemptionId: ev.id, twitchUserId: ev.user_id });
+  } catch (e) {
+    console.error('EventSub grant failed:', e.message);
+  }
+});
+
+// Create the webhook subscription (call once after deploy / secret rotation)
+// POST /eventsub/subscribe (admin)
+app.post('/eventsub/subscribe', checkAdminAuth, async (req, res) => {
+  try {
+    const secret = process.env.TWITCH_EVENTSUB_SECRET;
+    if (!secret || secret.length < 10 || secret.length > 100)
+      return res.status(500).json({ error: 'TWITCH_EVENTSUB_SECRET must be 10-100 chars' });
+    const base = (process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
+    if (!base.startsWith('https://')) return res.status(500).json({ error: 'PUBLIC_BASE_URL must be https://...' });
+    const rewardId = process.env.TWITCH_CHANNEL_REWARD_ID;
+    const data = await twitchHelix('post', '/eventsub/subscriptions', {
+      body: {
+        type: 'channel.channel_points_custom_reward_redemption.add',
+        version: '1',
+        condition: {
+          broadcaster_user_id: String(process.env.TWITCH_BROADCASTER_ID),
+          ...(rewardId && !rewardId.startsWith('your_') ? { reward_id: rewardId } : {}),
+        },
+        transport: { method: 'webhook', callback: `${base}/eventsub`, secret },
+      },
+    });
+    res.status(202).json(data);
+  } catch (error) {
+    console.error('EventSub Subscribe Error:', error.response?.data || error.message);
+    const upstream = error.response?.status;
+    res.status(upstream === 408 ? 504 : upstream || error.status || 500).json({ error: error.response?.data?.message || error.message || 'Failed to subscribe' });
+  }
+});
+
+// List active EventSub subscriptions — GET /eventsub/subscriptions (admin)
+app.get('/eventsub/subscriptions', checkAdminAuth, async (req, res) => {
+  try {
+    res.json(await twitchHelix('get', '/eventsub/subscriptions', {}));
+  } catch (error) {
+    const upstream = error.response?.status;
+    res.status(upstream === 408 ? 504 : upstream || error.status || 500).json({ error: error.response?.data?.message || error.message || 'Failed to list subscriptions' });
   }
 });
 
