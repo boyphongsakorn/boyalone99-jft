@@ -25,6 +25,10 @@ export class Profile implements OnInit {
 
   async ngOnInit() {
     if (typeof window === 'undefined') return;
+    if (!localStorage.getItem('user_profile')) {
+      this.router.navigateByUrl('/login');
+      return;
+    }
 
     // Try to load profile from local session first
     const savedUser = localStorage.getItem('user_profile');
