@@ -625,6 +625,7 @@ const twitchHelix = async (method, path, { params, body, retry = true } = {}) =>
       data: body,
       headers: { Authorization: `Bearer ${broadcasterToken}`, 'Client-Id': process.env.TWITCH_TTG_CLIENT_ID },
     });
+    console.log(res.data);
     return res.data;
   } catch (e) {
     if (e.response?.status === 401 && retry) {
