@@ -607,7 +607,7 @@ const refreshBroadcasterToken = async () => {
   const twitchdata = await twitchrefresh.json();
   process.env.TWITCH_OAUTH_TOKEN = twitchdata.token ?? twitchdata.access_token;
   broadcasterToken = process.env.TWITCH_OAUTH_TOKEN;
-  if (res.data.refresh_token) process.env.TWITCH_OAUTH_REFRESH = res.data.refresh_token;
+  if (twitchdata.refresh_token) process.env.TWITCH_OAUTH_REFRESH = twitchdata.refresh_token;
   console.log('🔄 Refreshed Twitch broadcaster token');
   return broadcasterToken;
 };
