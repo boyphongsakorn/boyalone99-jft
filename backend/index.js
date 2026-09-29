@@ -740,7 +740,7 @@ app.get('/follow/twitchsub', async (req, res) => {
 // GET /follow/youtube?userId=<main id>
 app.get('/follow/youtube', async (req, res) => {
   try {
-    const channelUrl = process.env.YOUTUBE_CHANNEL_URL || (process.env.YOUTUBE_CHANNEL_ID ? `https://www.youtube.com/channel/${process.env.YOUTUBE_CHANNEL_ID}?sub_confirmation=1` : 'https://www.youtube.com/@boyalone99?sub_confirmation=1');
+    const channelUrl = process.env.YOUTUBE_CHANNEL_URL || (process.env.YOUTUBE_CHANNEL_ID ? `https://www.youtube.com/channel/${process.env.YOUTUBE_CHANNEL_ID}?sub_confirmation=1` : 'https://youtube.com/@BoyAlone99Gaming?sub_confirmation=1');
     const userId = req.query.userId ? String(req.query.userId) : null;
     let claimed = false;
     if (userId) {
