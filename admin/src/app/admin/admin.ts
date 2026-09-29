@@ -56,6 +56,9 @@ export class Admin implements OnInit {
   protected coinAmount: Record<string, number> = {};
   protected coinReason: Record<string, string> = {};
 
+  // sub tenure seed (per user)
+  protected seedMonths: Record<string, number> = {};
+
   constructor(private http: HttpClient, private router: Router) {}
 
   async ngOnInit() {
@@ -277,6 +280,25 @@ export class Admin implements OnInit {
       await this.refreshHistory();
     } catch (e: any) {
       this.notice.set(e?.error?.error || 'Sub reset failed');
+    }
+  }
+
+  // Helix /subscriptions has no tenure field: a 3-month sub claiming first time
+  // counts streak=0 and gets base x 1. Verify tenure in Twitch dashboard, enter
+  // months here — seeds prior-month locks so the next live claim pays base x months.
+  protected async seedSubTenure(user: { id: string; username: string }) {
+    const months = Number(this.seedMonths[user.id] || 0);
+    if (!Number.isInteger(months) || months < 1) {
+      this.notice.set('Enter tenure months (>= 1) first');
+      return;
+    }
+    if (typeof window !== 'undefined' && !window.confirm(`Seed ${months}-month tenure for ${user.username}? Next claim pays 200 x ${months}.`)) return;
+    try {
+      const res: any = await this.http.post(`${environment.apiUrl}/admin/sub-claims/seed`, { userId: user.id, months }).toPromise();
+      this.notice.set(`Seeded tenure for ${user.username}: ${res.seeded} lock(s), next claim ${res.nextAmount} AC`);
+      await this.refreshHistory();
+    } catch (e: any) {
+      this.notice.set(e?.error?.error || 'Seed failed');
     }
   }
 

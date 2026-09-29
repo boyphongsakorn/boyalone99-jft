@@ -362,6 +362,60 @@ app.post('/admin/sub-claims/reset', checkAdminAuth, async (req, res) => {
   }
 });
 
+// Seed tenure for Twitch sub monthly claims (admin).
+// Helix /subscriptions exposes no tenure field, so a 3-month sub claiming
+// for the first time counts streak=0 and gets base x 1. Admin verifies tenure
+// in the Twitch dashboard once, seeds prior-month locks, and the next claim
+// pays base x tenure. No coins granted now — the multiplier covers it.
+// POST /admin/sub-claims/seed { userId, months }
+app.post('/admin/sub-claims/seed', checkAdminAuth, async (req, res) => {
+  try {
+    const userId = req.body?.userId ? String(req.body.userId) : null;
+    const months = Number(req.body?.months);
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+    if (!Number.isInteger(months) || months < 1 || months > 120) {
+      return res.status(400).json({ error: 'months must be an integer 1-120' });
+    }
+    const [u] = await pool.query('SELECT 1 FROM users WHERE id = ?', [userId]);
+    if (u.length === 0) return res.status(404).json({ error: 'User not found' });
+    const [existing] = await pool.query(
+      "SELECT platform FROM claimed_follows WHERE user_id = ? AND platform LIKE 'twitchsub%'",
+      [userId]
+    );
+    const have = new Set(existing.map((r) => r.platform));
+    const need = months - 1; // rows that must exist BEFORE next claim (next pays base x months)
+    if (existing.length >= need) return res.json({ ok: true, seeded: 0, months, note: 'tenure already covered' });
+    // Walk back from current month, filling missing month keys as tenure locks.
+    // Current month is never seeded — it is claimed live by the user.
+    const now = new Date();
+    let y = now.getUTCFullYear();
+    let m = now.getUTCMonth() + 1; // 1-12
+    m -= 1; if (m < 1) { m = 12; y -= 1; }
+    let seeded = 0;
+    let guard = 0;
+    while (have.size < need && guard < 130) {
+      guard += 1;
+      const key = `${y}-${String(m).padStart(2, '0')}`;
+      const platform = `twitchsub:${key}`;
+      if (!have.has(platform)) {
+        await pool.query(
+          'INSERT IGNORE INTO claimed_follows (user_id, platform, claimed_at) VALUES (?, ?, ?)',
+          [userId, platform, `${key}-15 12:00:00`]
+        );
+        have.add(platform);
+        seeded += 1;
+      }
+      m -= 1; if (m < 1) { m = 12; y -= 1; }
+    }
+    const [mc] = await pool.query("SELECT COUNT(*) AS n FROM claimed_follows WHERE user_id = ? AND platform LIKE 'twitchsub%'", [userId]);
+    const locks = Number(mc[0]?.n || 0);
+    res.json({ ok: true, seeded, months, locks, nextAmount: Number(process.env.TWITCH_SUB_AC || 200) * (locks + 1) });
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to seed tenure' });
+  }
+});
+
 // Rollback a redemption: refund cost, restore stock, delete row + audit entry
 // POST /admin/redemptions/:id/rollback
 app.post('/admin/redemptions/:id/rollback', checkAdminAuth, async (req, res) => {
