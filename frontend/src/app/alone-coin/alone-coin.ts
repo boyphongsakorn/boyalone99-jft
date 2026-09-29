@@ -25,6 +25,8 @@ export class AloneCoin implements OnInit {
   protected readonly hasSub = signal<boolean | null>(null);
   protected readonly subClaimed = signal(false);
   protected readonly subUrl = signal('https://www.twitch.tv/subs/boyalone99');
+  protected readonly subMonths = signal(0);
+  protected readonly subNextAmount = signal(200);
   protected readonly channelPending = signal(0);
   protected readonly channelRedeemable = signal(false);
   protected readonly notice = signal<string | null>(null);
@@ -92,6 +94,8 @@ export class AloneCoin implements OnInit {
         if (sub.reason === 'twitch_not_linked') this.hasSub.set(false);
         else this.hasSub.set(sub.subscribed === true);
         if (sub.claimed) this.subClaimed.set(true);
+        if (typeof sub.monthsClaimed === 'number') this.subMonths.set(sub.monthsClaimed);
+        if (typeof sub.nextAmount === 'number') this.subNextAmount.set(sub.nextAmount);
       }
     } catch {
       /* keep defaults, claim will surface error */
@@ -126,8 +130,9 @@ export class AloneCoin implements OnInit {
       const res: any = await this.http
         .post(`${environment.apiUrl}/claim/follow`, { userId: id, platform })
         .toPromise();
-      const amounts: Record<string, number> = { twitch: 100, youtube: 100, booster: 150, lfg: 100, twitchsub: 200 };
-      this.notice.set(`รับ +${amounts[platform]} AC สำเร็จ! ยอดคงเหลือ ${res.balance} AC`);
+      const amounts: Record<string, number> = { twitch: 100, youtube: 100, booster: 150, lfg: 100, twitchsub: res.granted ?? 200 };
+      this.notice.set(res.monthsClaimed ? `รับ +${res.granted} AC (ซับเดือนที่ ${res.monthsClaimed}) สำเร็จ! ยอดคงเหลือ ${res.balance} AC` : `รับ +${amounts[platform]} AC สำเร็จ! ยอดคงเหลือ ${res.balance} AC`);
+      if (typeof res?.monthsClaimed === 'number') this.subMonths.set(res.monthsClaimed);
       if (platform === 'twitch') this.twitchClaimed.set(true);
       else if (platform === 'youtube') this.youtubeClaimed.set(true);
       else if (platform === 'booster') this.boosterClaimed.set(true);

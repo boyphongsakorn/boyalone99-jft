@@ -74,17 +74,22 @@
         <span class="step-icon" aria-hidden="true">✎</span>
         <div>
           <h3>สมัครสมาชิก Twitch</h3>
-          <p>สนับสนุนครีเอเตอร์ด้วยการซับ เพื่อปลดล็อกของรางวัลเพิ่มเติม</p>
+          <p>สนับสนุนครีเอเตอร์ด้วยการซับ — รับ 200 AC × จำนวนเดือนที่ซับ (รับได้ทุกเดือน)</p>
           <div class="claim-row">
             @if (!isLoggedIn()) {
               <a class="claim-btn" routerLink="/login">ล็อกอินเพื่อรับ</a>
             } @else {
               <a class="claim-btn" [href]="subUrl()" target="_blank" rel="noopener">สมัครสมาชิก Twitch</a>
               <button type="button" class="claim-btn primary" (click)="claim('twitchsub')" [disabled]="subClaimed() || checking()">
-                {{ subClaimed() ? 'รับแล้ว ✓' : 'รับ +200 AC (Sub)' }}
+                {{ subClaimed() ? 'รับแล้ว ✓ รอเดือนหน้า' : 'รับ +' + subNextAmount() + ' AC (Sub)' }}
               </button>
             }
           </div>
+          @if (isLoggedIn() && subMonths() > 0 && subClaimed()) {
+            <p class="claim-hint">สะสมแล้ว {{ subMonths() }} เดือน — กลับมาใหม่เดือนหน้า รับ 200 × {{ subMonths() + 1 }} AC</p>
+          } @else if (isLoggedIn() && subMonths() > 0) {
+            <p class="claim-hint">สะสมมาแล้ว {{ subMonths() }} เดือน — เดือนนี้รับ 200 × {{ subMonths() + 1 }} AC</p>
+          }
           @if (!twitchLinked() && isLoggedIn()) {
             <p class="claim-hint">ยังไม่ได้เชื่อม Twitch — ไปที่ <a routerLink="/profile">โปรไฟล์ → Link Twitch</a> ก่อน แล้วกดรับอีกครั้ง</p>
           } @else if (hasSub() === false && isLoggedIn()) {

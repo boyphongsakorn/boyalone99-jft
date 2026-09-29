@@ -525,16 +525,36 @@ app.get('/follow/twitchsub', async (req, res) => {
     if (users.length === 0 || !users[0].twitch_id) {
       return res.json({ subscribed: false, reason: 'twitch_not_linked', subscribeUrl: 'https://www.twitch.tv/subs/boyalone99' });
     }
-    const [claimed] = await pool.query('SELECT 1 FROM claimed_follows WHERE user_id = ? AND platform = ?', [userId, 'twitchsub']);
+    const monthKey = new Date().toISOString().slice(0, 7); // YYYY-MM
+    const monthPlatform = `twitchsub:${monthKey}`;
+    const [claimedRows] = await pool.query(
+      'SELECT platform, claimed_at FROM claimed_follows WHERE user_id = ? AND (platform = ? OR platform = ?)',
+      [userId, monthPlatform, 'twitchsub']
+    );
+    const claimedThisMonth = claimedRows.some((r) => {
+      if (r.platform === monthPlatform) return true;
+      if (r.platform === 'twitchsub' && r.claimed_at) {
+        try {
+          return new Date(r.claimed_at).toISOString().slice(0, 7) === monthKey;
+        } catch { return false; }
+      }
+      return false;
+    });
+    const [monthCount] = await pool.query(
+      "SELECT COUNT(*) AS n FROM claimed_follows WHERE user_id = ? AND platform LIKE 'twitchsub%'",
+      [userId]
+    );
+    const monthsClaimed = Number(monthCount[0]?.n || 0);
+    const baseAmount = Number(process.env.TWITCH_SUB_AC || 200);
     try {
       const data = await twitchHelix('get', '/subscriptions', {
         params: { broadcaster_id: process.env.TWITCH_BROADCASTER_ID, user_id: users[0].twitch_id },
       });
       const sub = (data.data || [])[0] || null;
-      res.json({ subscribed: !!sub, tier: sub?.tier || null, isGift: sub?.is_gift ?? null, claimed: claimed.length > 0, subscribeUrl: 'https://www.twitch.tv/subs/boyalone99' });
+      res.json({ subscribed: !!sub, tier: sub?.tier || null, isGift: sub?.is_gift ?? null, claimed: claimedThisMonth, monthKey, monthsClaimed, baseAmount, nextAmount: baseAmount * (monthsClaimed + 1), subscribeUrl: 'https://www.twitch.tv/subs/boyalone99' });
     } catch (e) {
       if (e.status === 403 || e.response?.status === 403) {
-        return res.json({ subscribed: null, reason: 'missing_scope', claimed: claimed.length > 0, subscribeUrl: 'https://www.twitch.tv/subs/boyalone99' });
+        return res.json({ subscribed: null, reason: 'missing_scope', claimed: claimedThisMonth, monthKey, monthsClaimed, baseAmount, nextAmount: baseAmount * (monthsClaimed + 1), subscribeUrl: 'https://www.twitch.tv/subs/boyalone99' });
       }
       throw e;
     }
@@ -615,9 +635,20 @@ app.post('/claim/follow', async (req, res) => {
       return res.status(400).json({ error: 'userId and platform (twitch|youtube|booster|lfg|twitchsub) required' });
     }
     const amounts = { twitch: 100, youtube: 100, booster: 150, lfg: 100, twitchsub: Number(process.env.TWITCH_SUB_AC || 200) };
-    const amount = amounts[platform];
-    const [claimed] = await pool.query('SELECT 1 FROM claimed_follows WHERE user_id = ? AND platform = ?', [userId, platform]);
-    if (claimed.length > 0) return res.status(400).json({ error: 'Already claimed' });
+    // Twitch sub is re-claimable every calendar month while sub is active.
+    // Helix /subscriptions exposes no tenure field, so payout = base x streak:
+    // 1st month = base x 1, 2nd month = base x 2, ... (streak = prior twitchsub claims + 1)
+    const isSubMonth = platform === 'twitchsub';
+    const claimPlatform = isSubMonth ? `twitchsub:${new Date().toISOString().slice(0, 7)}` : platform;
+    let amount = amounts[platform];
+    let streak = 0;
+    if (isSubMonth) {
+      const [mc] = await pool.query("SELECT COUNT(*) AS n FROM claimed_follows WHERE user_id = ? AND platform LIKE 'twitchsub%'", [userId]);
+      streak = Number(mc[0]?.n || 0);
+      amount = amounts[platform] * (streak + 1);
+    }
+    const [claimed] = await pool.query('SELECT 1 FROM claimed_follows WHERE user_id = ? AND platform = ?', [userId, claimPlatform]);
+    if (claimed.length > 0) return res.status(400).json({ error: isSubMonth ? 'Already claimed this month — come back next month' : 'Already claimed' });
     if (platform === 'twitch' || platform === 'twitchsub') {
       const [users] = await pool.query('SELECT twitch_id FROM users WHERE id = ?', [userId]);
       if (users.length === 0 || !users[0].twitch_id) return res.status(400).json({ error: 'Twitch not linked' });
@@ -655,9 +686,12 @@ app.post('/claim/follow', async (req, res) => {
       if (!roles.includes(need)) return res.status(400).json({ error: platform === 'booster' ? 'Server Booster role not found' : 'LFG role not found' });
     }
     await pool.query('UPDATE users SET alone_coin = alone_coin + ? WHERE id = ?', [amount, userId]);
-    await pool.query('INSERT INTO claimed_follows (user_id, platform) VALUES (?, ?)', [userId, platform]);
-    await pool.query('INSERT INTO coin_history (user_id, amount, reason) VALUES (?, ?, ?)', [userId, amount, `follow ${platform} +${amount} AC`]);
+    await pool.query('INSERT INTO claimed_follows (user_id, platform) VALUES (?, ?)', [userId, claimPlatform]);
+    await pool.query('INSERT INTO coin_history (user_id, amount, reason) VALUES (?, ?, ?)', [userId, amount, `follow ${claimPlatform} +${amount} AC`]);
     const [rows] = await pool.query('SELECT alone_coin FROM users WHERE id = ?', [userId]);
+    if (isSubMonth) {
+      return res.json({ balance: rows[0]?.alone_coin ?? 0, granted: amount, monthsClaimed: streak + 1, monthKey: claimPlatform.split(':')[1] });
+    }
     res.json({ balance: rows[0]?.alone_coin ?? 0 });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'Already claimed' });
@@ -1033,7 +1067,7 @@ app.get('/eventsub/authorize', checkAdminAuth, (req, res) => {
   const base = (process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
   if (!base.startsWith('https://')) return res.status(500).json({ error: 'PUBLIC_BASE_URL must be https://...' });
   const redirectUri = `${base}/auth/twitch/broadcaster/callback`;
-  const scope = 'channel:read:redemptions channel:manage:redemptions';
+  const scope = 'channel:read:redemptions channel:manage:redemptions channel:read:subscriptions';
   const url = `https://id.twitch.tv/oauth2/authorize?client_id=${encodeURIComponent(cid)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}`;
   res.json({ url, redirectUri, scope });
 });
