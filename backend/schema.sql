@@ -47,6 +47,16 @@ CREATE TABLE IF NOT EXISTS channel_point_claims (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
+-- Twitch sub tenure captured from EventSub (Helix REST has no tenure field)
+CREATE TABLE IF NOT EXISTS twitch_sub_tenure (
+    twitch_id VARCHAR(255) PRIMARY KEY,
+    user_id VARCHAR(255) NULL,
+    cumulative_months INT NOT NULL DEFAULT 1,
+    streak_months INT NULL,
+    tier VARCHAR(10) NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+};
+
 -- Claimed follow rewards (one claim per user per platform)
 CREATE TABLE IF NOT EXISTS claimed_follows (
     user_id VARCHAR(255) NOT NULL,

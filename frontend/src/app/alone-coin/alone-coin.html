@@ -80,10 +80,14 @@
               <a class="claim-btn" routerLink="/login">ล็อกอินเพื่อรับ</a>
             } @else {
               <a class="claim-btn" [href]="subUrl()" target="_blank" rel="noopener">สมัครสมาชิก Twitch</a>
-              <label class="claim-hint" style="align-items:center;display:flex;gap:6px;">ซับมาแล้ว
-                <input type="number" min="1" max="120" [value]="subTenure()" (input)="setTenure($any($event.target).value)" style="border:2px solid var(--ink);border-radius:999px;padding:6px 10px;width:76px;font:inherit;" />
-                เดือน
-              </label>
+              @if (subTenureAuto()) {
+                <span class="claim-hint">Twitch ระบุซับ {{ subTenure() }} เดือน → รับ {{ subNextAmount() }} AC</span>
+              } @else if (subNeedsTenure()) {
+                <label class="claim-hint" style="align-items:center;display:flex;gap:6px;">ซับมาแล้ว
+                  <input type="number" min="1" max="120" [value]="subTenure()" (input)="setTenure($any($event.target).value)" style="border:2px solid var(--ink);border-radius:999px;padding:6px 10px;width:76px;font:inherit;" />
+                  เดือน
+                </label>
+              }
               <button type="button" class="claim-btn primary" (click)="claim('twitchsub')" [disabled]="subClaimed() || checking()">
                 {{ subClaimed() ? 'รับแล้ว ✓ รอเดือนหน้า' : 'รับ +' + subNextAmount() + ' AC (Sub)' }}
               </button>

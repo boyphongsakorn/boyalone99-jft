@@ -674,17 +674,20 @@ app.get('/follow/twitchsub', async (req, res) => {
     );
     const monthsClaimed = Number(monthCount[0]?.n || 0);
     const baseAmount = Number(process.env.TWITCH_SUB_AC || 200);
+    const twitchMonths = await getTwitchTenure(users[0].twitch_id);
     const tenureQ = Number(req.query.tenure ?? req.query.months);
-    const effectiveNext = Number.isInteger(tenureQ) && tenureQ >= 1 && tenureQ <= 120 ? Math.max(monthsClaimed + 1, tenureQ) : monthsClaimed + 1;
+    const tenureHint = Number.isInteger(tenureQ) && tenureQ >= 1 && tenureQ <= 120 ? tenureQ : 0;
+    const effectiveNext = Math.max(monthsClaimed + 1, twitchMonths, tenureHint);
+    const tenureAuto = twitchMonths > 0;
     try {
       const data = await twitchHelix('get', '/subscriptions', {
         params: { broadcaster_id: process.env.TWITCH_BROADCASTER_ID, user_id: users[0].twitch_id },
       });
       const sub = (data.data || [])[0] || null;
-      res.json({ subscribed: !!sub, tier: sub?.tier || null, isGift: sub?.is_gift ?? null, claimed: claimedThisMonth, monthKey, monthsClaimed, baseAmount, nextAmount: baseAmount * effectiveNext, effectiveTenure: effectiveNext, subscribeUrl: 'https://www.twitch.tv/subs/boyalone99' });
+      res.json({ subscribed: !!sub, tier: sub?.tier || null, isGift: sub?.is_gift ?? null, claimed: claimedThisMonth, monthKey, monthsClaimed, baseAmount, twitchMonths: twitchMonths || null, tenureSource: twitchMonths > 0 ? 'twitch' : (tenureHint > 0 ? 'manual' : 'streak'), tenureAuto, needsTenureInput: !!sub && !claimedThisMonth && twitchMonths === 0 && monthsClaimed === 0, nextAmount: baseAmount * effectiveNext, effectiveTenure: effectiveNext, subscribeUrl: 'https://www.twitch.tv/subs/boyalone99' });
     } catch (e) {
       if (e.status === 403 || e.response?.status === 403) {
-        return res.json({ subscribed: null, reason: 'missing_scope', claimed: claimedThisMonth, monthKey, monthsClaimed, baseAmount, nextAmount: baseAmount * effectiveNext, effectiveTenure: effectiveNext, subscribeUrl: 'https://www.twitch.tv/subs/boyalone99' });
+        return res.json({ subscribed: null, reason: 'missing_scope', claimed: claimedThisMonth, monthKey, monthsClaimed, baseAmount, twitchMonths: twitchMonths || null, tenureSource: twitchMonths > 0 ? 'twitch' : 'streak', tenureAuto, needsTenureInput: false, nextAmount: baseAmount * effectiveNext, effectiveTenure: effectiveNext, subscribeUrl: 'https://www.twitch.tv/subs/boyalone99' });
       }
       throw e;
     }
@@ -778,9 +781,11 @@ app.post('/claim/follow', async (req, res) => {
       const [mc] = await pool.query("SELECT COUNT(*) AS n FROM claimed_follows WHERE user_id = ? AND platform LIKE 'twitchsub%'", [userId]);
       const originalStreak = Number(mc[0]?.n || 0);
       streak = originalStreak;
+      const [tu] = await pool.query('SELECT twitch_id FROM users WHERE id = ?', [userId]);
+      const twitchMonths = tu[0]?.twitch_id ? await getTwitchTenure(tu[0].twitch_id) : 0;
       const tenureParam = Number(req.body.tenure ?? req.body.months);
-      effectiveTenure = originalStreak + 1;
-      if (Number.isInteger(tenureParam) && tenureParam >= 1 && tenureParam <= 120) effectiveTenure = Math.max(effectiveTenure, tenureParam);
+      const tenureHint = Number.isInteger(tenureParam) && tenureParam >= 1 && tenureParam <= 120 ? tenureParam : 0;
+      effectiveTenure = Math.max(originalStreak + 1, twitchMonths, tenureHint);
       amount = amounts[platform] * effectiveTenure;
       // auto-seed prior-month locks so a 3-month sub claiming first time gets 600 and streak stays consistent
       if (effectiveTenure > originalStreak + 1) {
@@ -847,6 +852,12 @@ app.post('/claim/follow', async (req, res) => {
     await pool.query('UPDATE users SET alone_coin = alone_coin + ? WHERE id = ?', [amount, userId]);
     await pool.query('INSERT INTO claimed_follows (user_id, platform) VALUES (?, ?)', [userId, claimPlatform]);
     await pool.query('INSERT INTO coin_history (user_id, amount, reason) VALUES (?, ?, ?)', [userId, amount, `follow ${claimPlatform} +${amount} AC`]);
+    if (isSubMonth && effectiveTenure > 0) {
+      try {
+        const [trow] = await pool.query('SELECT twitch_id FROM users WHERE id = ?', [userId]);
+        if (trow[0]?.twitch_id) await saveTwitchTenure({ twitchId: trow[0].twitch_id, cumulative: effectiveTenure, streak: null, tier: null });
+      } catch { /* tenure cache best-effort */ }
+    }
     const [rows] = await pool.query('SELECT alone_coin FROM users WHERE id = ?', [userId]);
     if (isSubMonth) {
       return res.json({ balance: rows[0]?.alone_coin ?? 0, granted: amount, monthsClaimed: streak + 1, monthKey: claimPlatform.split(':')[1] });
@@ -1173,6 +1184,31 @@ app.post('/claim/channel-points', async (req, res) => {
   }
 });
 
+// Twitch sub tenure — Helix GET /subscriptions returns tier/is_gift only, no month
+// count. The month count only arrives via EventSub channel.subscription.message
+// (cumulative_months). We store it here so first claim pays 200 x real months.
+const ensureTenureTable = () => pool.query(`CREATE TABLE IF NOT EXISTS twitch_sub_tenure (
+  twitch_id VARCHAR(255) PRIMARY KEY, user_id VARCHAR(255) NULL,
+  cumulative_months INT NOT NULL DEFAULT 1, streak_months INT NULL, tier VARCHAR(10) NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)`).catch(() => {});
+ensureTenureTable();
+const getTwitchTenure = async (twitchId) => {
+  try {
+    const [rows] = await pool.query('SELECT cumulative_months FROM twitch_sub_tenure WHERE twitch_id = ?', [twitchId]);
+    return Number(rows[0]?.cumulative_months || 0);
+  } catch { return 0; }
+};
+const saveTwitchTenure = async ({ twitchId, cumulative, streak, tier }) => {
+  try {
+    await ensureTenureTable();
+    const [u] = await pool.query('SELECT id FROM users WHERE twitch_id = ?', [twitchId]);
+    await pool.query(`INSERT INTO twitch_sub_tenure (twitch_id, user_id, cumulative_months, streak_months, tier)
+      VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE user_id = VALUES(user_id),
+      cumulative_months = GREATEST(cumulative_months, VALUES(cumulative_months)),
+      streak_months = VALUES(streak_months), tier = VALUES(tier)`,
+      [twitchId, u[0]?.id || null, Math.max(1, Number(cumulative) || 1), streak ?? null, tier ?? null]);
+  } catch (e) { console.error('Save tenure failed:', e.message); }
+};
 // Twitch EventSub — listening way: Twitch pushes redemption.add events to POST /eventsub,
 // backend auto-grants AC + fulfills. Setup: PUBLIC_BASE_URL (public https) +
 // TWITCH_EVENTSUB_SECRET (10-100 chars) + broadcaster token with channel:read:redemptions
@@ -1274,8 +1310,17 @@ app.post('/eventsub', async (req, res) => {
   }
   res.sendStatus(200); // ack fast (Twitch requires <10s), grant in background
   try {
-    if (req.body?.subscription?.type !== 'channel.channel_points_custom_reward_redemption.add') return;
+    const subType = req.body?.subscription?.type;
     const ev = req.body.event || {};
+    if (subType === 'channel.subscription.message') {
+      await saveTwitchTenure({ twitchId: ev.user_id, cumulative: ev.cumulative_months, streak: ev.streak_months ?? ev.duration_months ?? null, tier: ev.tier });
+      return;
+    }
+    if (subType === 'channel.subscribe') {
+      await saveTwitchTenure({ twitchId: ev.user_id, cumulative: ev.cumulative_months ?? 1, streak: ev.streak_months ?? null, tier: ev.tier });
+      return;
+    }
+    if (subType !== 'channel.channel_points_custom_reward_redemption.add') return;
     const configured = process.env.TWITCH_CHANNEL_REWARD_ID;
     if (configured && !configured.startsWith('your_') && ev.reward?.id !== configured) return;
     if (ev.status && ev.status !== 'unfulfilled') return;
@@ -1295,15 +1340,15 @@ app.post('/eventsub/subscribe', checkAdminAuth, async (req, res) => {
     const base = (process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
     if (!base.startsWith('https://')) return res.status(500).json({ error: 'PUBLIC_BASE_URL must be https://...' });
     // ponytail: no reward_id filter — rewards created via dashboard/TTG belong to another client ID and cause 403; filter by reward in /eventsub handler instead
-    const data = await twitchHelixApp('post', '/eventsub/subscriptions', {
-      body: {
-        type: 'channel.channel_points_custom_reward_redemption.add',
-        version: '1',
-        condition: { broadcaster_user_id: String(process.env.TWITCH_BROADCASTER_ID) },
-        transport: { method: 'webhook', callback: `${base}/eventsub`, secret },
-      },
+    const mk = (type, version, condition) => twitchHelixApp('post', '/eventsub/subscriptions', {
+      body: { type, version, condition, transport: { method: 'webhook', callback: `${base}/eventsub`, secret } },
     });
-    res.status(202).json(data);
+    const bid = String(process.env.TWITCH_BROADCASTER_ID);
+    const results = [];
+    results.push(await mk('channel.channel_points_custom_reward_redemption.add', '1', { broadcaster_user_id: bid }));
+    try { results.push(await mk('channel.subscription.message', '1', { broadcaster_user_id: bid })); } catch (e) { results.push({ error: e.response?.data?.message || e.message }); }
+    try { results.push(await mk('channel.subscribe', '1', { broadcaster_user_id: bid })); } catch (e) { results.push({ error: e.response?.data?.message || e.message }); }
+    res.status(202).json({ data: results });
   } catch (error) {
     console.error('EventSub Subscribe Error:', error.response?.data || error.message);
     const upstream = error.response?.status;
