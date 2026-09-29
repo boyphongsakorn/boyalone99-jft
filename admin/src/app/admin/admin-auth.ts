@@ -22,8 +22,16 @@ export class AdminAuth implements OnInit {
 
   async ngOnInit() {
     if (typeof window !== 'undefined' && localStorage.getItem('admin_token')) {
-      this.router.navigateByUrl('/');
-      return;
+      // Validate the stored token server-side (signature/secret rotation
+      // can't be detected from the client). The interceptor auto-clears it
+      // and stays on /auth if the backend rejects it.
+      try {
+        await this.http.get(`${environment.apiUrl}/admin/settings`).toPromise();
+        this.router.navigateByUrl('/');
+        return;
+      } catch {
+        return;
+      }
     }
     try {
       const statusRes: any = await this.http.get(`${environment.apiUrl}/admin/auth/status`).toPromise();

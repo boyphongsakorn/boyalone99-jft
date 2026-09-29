@@ -41,7 +41,9 @@ export class Admin implements OnInit {
   protected readonly redemptions = signal<any[]>([]);
   protected readonly coinHistory = signal<any[]>([]);
   protected readonly subClaims = signal<any[]>([]);
-  protected historyUserFilter = '';
+  protected redemptionUserFilter = '';
+  protected coinUserFilter = '';
+  protected subUserFilter = '';
   protected readonly notice = signal<string | null>(null);
   protected readonly loading = signal(false);
   protected readonly eventsubStatus = signal<any[] | null>(null);
@@ -64,6 +66,7 @@ export class Admin implements OnInit {
 
   async ngOnInit() {
     if (typeof window !== 'undefined' && !localStorage.getItem('admin_token')) {
+      this.router.navigateByUrl('/auth');
       return;
     }
     await this.refreshAll();
@@ -272,23 +275,21 @@ export class Admin implements OnInit {
     }
   }
 
-  private historyMatch(h: any): boolean {
-    const q = this.historyUserFilter.trim().toLowerCase();
-    if (!q) return true;
-    return [h?.username, h?.user_id, h?.userId, h?.twitch_username]
-      .filter(Boolean).some((v: string) => String(v).toLowerCase().includes(q));
+  private historyMatch(h: any, userId: string): boolean {
+    if (!userId) return true;
+    return h?.user_id === userId || h?.userId === userId;
   }
 
   protected filteredRedemptions(): any[] {
-    return this.redemptions().filter((h) => this.historyMatch(h));
+    return this.redemptions().filter((h) => this.historyMatch(h, this.redemptionUserFilter));
   }
 
   protected filteredCoinHistory(): any[] {
-    return this.coinHistory().filter((h) => this.historyMatch(h));
+    return this.coinHistory().filter((h) => this.historyMatch(h, this.coinUserFilter));
   }
 
   protected filteredSubClaims(): any[] {
-    return this.subClaims().filter((h) => this.historyMatch(h));
+    return this.subClaims().filter((h) => this.historyMatch(h, this.subUserFilter));
   }
 
   protected async revokeSubClaim(userId: string, platform: string) {
