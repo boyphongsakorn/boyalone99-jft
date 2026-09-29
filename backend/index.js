@@ -362,6 +362,46 @@ app.post('/admin/sub-claims/reset', checkAdminAuth, async (req, res) => {
   }
 });
 
+// Revoke a Twitch sub monthly claim WITHOUT re-claim: reverses the coin grant
+// (audit entry kept) but KEEPS the claimed_follows lock so the user cannot
+// re-claim that month. Use when coins were granted by mistake / abuse.
+// POST /admin/sub-claims/revoke { userId, monthKey? } — monthKey YYYY-MM, default current month
+app.post('/admin/sub-claims/revoke', checkAdminAuth, async (req, res) => {
+  try {
+    const userId = req.body?.userId ? String(req.body.userId) : null;
+    const monthKey = req.body?.monthKey ? String(req.body.monthKey) : new Date().toISOString().slice(0, 7);
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+    if (!/^\d{4}-\d{2}$/.test(monthKey)) return res.status(400).json({ error: 'monthKey must be YYYY-MM' });
+    const monthPlatform = `twitchsub:${monthKey}`;
+    const [grants] = await pool.query(
+      `SELECT id, amount, reason FROM coin_history
+       WHERE user_id = ? AND (reason LIKE ? OR (reason LIKE 'follow twitchsub %' AND DATE_FORMAT(created_at, '%Y-%m') = ?))
+       ORDER BY created_at DESC LIMIT 1`,
+      [userId, `follow ${monthPlatform}%`, monthKey]
+    );
+    let reverted = 0;
+    if (grants.length > 0) {
+      const g = grants[0];
+      const [dup] = await pool.query('SELECT 1 FROM coin_history WHERE reason LIKE ?', [`revoke sub ${userId} ${monthPlatform}%`]);
+      if (dup.length === 0) {
+        await pool.query('UPDATE users SET alone_coin = alone_coin - ? WHERE id = ?', [g.amount, userId]);
+        await pool.query('INSERT INTO coin_history (user_id, amount, reason) VALUES (?, ?, ?)', [
+          userId,
+          -g.amount,
+          `revoke sub ${userId} ${monthPlatform} (coin #${g.id})`.slice(0, 255),
+        ]);
+        reverted = -Number(g.amount);
+      }
+    }
+    // ponytail: lock kept on purpose — revoke != reset, no re-claim allowed
+    const [rows] = await pool.query('SELECT alone_coin FROM users WHERE id = ?', [userId]);
+    res.json({ ok: true, monthKey, reverted, balance: rows[0]?.alone_coin ?? 0 });
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to revoke sub claim' });
+  }
+});
+
 // Seed tenure for Twitch sub monthly claims (admin).
 // Helix /subscriptions exposes no tenure field, so a 3-month sub claiming
 // for the first time counts streak=0 and gets base x 1. Admin verifies tenure

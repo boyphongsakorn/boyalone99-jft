@@ -121,14 +121,22 @@
   }
 
   @if (tab() === 'history') {
+    <section class="card" style="margin-bottom: 16px;">
+      <div class="coin-form">
+        <input [(ngModel)]="historyUserFilter" placeholder="Filter by user / id…" />
+        @if (historyUserFilter) {
+          <button type="button" (click)="historyUserFilter = ''">Clear</button>
+        }
+      </div>
+    </section>
     <section class="panel-grid">
       <div class="card">
-        <h2>Redemptions ({{ redemptions().length }})</h2>
+        <h2>Redemptions ({{ filteredRedemptions().length }})</h2>
         <div class="table-wrap">
           <table>
             <thead><tr><th>When</th><th>User</th><th>Reward</th><th></th></tr></thead>
             <tbody>
-              @for (h of redemptions(); track h.id) {
+              @for (h of filteredRedemptions(); track h.id) {
                 <tr><td>{{ h.redeemed_at }}</td><td>{{ h.username }}<br /><small>{{ h.user_id }}</small></td><td>{{ h.reward_title }}<br /><small>{{ h.reward_cost }} AC</small></td><td class="actions"><button type="button" class="danger" (click)="rollbackRedemption(h.id)">Rollback</button></td></tr>
               }
             </tbody>
@@ -136,12 +144,12 @@
         </div>
       </div>
       <div class="card">
-        <h2>Coin history ({{ coinHistory().length }})</h2>
+        <h2>Coin history ({{ filteredCoinHistory().length }})</h2>
         <div class="table-wrap">
           <table>
             <thead><tr><th>When</th><th>User</th><th>Amount</th><th>Reason</th><th></th></tr></thead>
             <tbody>
-              @for (h of coinHistory(); track h.id) {
+              @for (h of filteredCoinHistory(); track h.id) {
                 <tr><td>{{ h.created_at }}</td><td>{{ h.username }}</td><td>{{ h.amount }}</td><td>{{ h.reason }}</td><td class="actions"><button type="button" class="danger" (click)="rollbackCoin(h.id)">Rollback</button></td></tr>
               }
             </tbody>
@@ -149,14 +157,14 @@
         </div>
       </div>
       <div class="card">
-        <h2>Twitch sub claims ({{ subClaims().length }})</h2>
-        <p style="font-size: .78rem; color: var(--muted);">Reset frees the monthly lock so the user can re-claim that month.</p>
+        <h2>Twitch sub claims ({{ filteredSubClaims().length }})</h2>
+        <p style="font-size: .78rem; color: var(--muted);">Reset frees the monthly lock so the user can re-claim that month. Revoke keeps the lock — no re-claim.</p>
         <div class="table-wrap">
           <table>
             <thead><tr><th>When</th><th>User</th><th>Month</th><th>Granted</th><th></th></tr></thead>
             <tbody>
-              @for (s of subClaims(); track s.user_id + s.platform) {
-                <tr><td>{{ s.claimed_at }}</td><td>{{ s.username }}<br /><small>{{ s.user_id }}</small></td><td>{{ s.platform }}</td><td>{{ s.granted_ac ?? '-' }} AC</td><td class="actions"><button type="button" class="danger" (click)="resetSubClaim(s.user_id, s.platform)">Reset (re-claim)</button></td></tr>
+              @for (s of filteredSubClaims(); track s.user_id + s.platform) {
+                <tr><td>{{ s.claimed_at }}</td><td>{{ s.username }}<br /><small>{{ s.user_id }}</small></td><td>{{ s.platform }}</td><td>{{ s.granted_ac ?? '-' }} AC</td><td class="actions"><button type="button" class="danger" (click)="resetSubClaim(s.user_id, s.platform)">Reset (re-claim)</button> <button type="button" class="danger" (click)="revokeSubClaim(s.user_id, s.platform)">Revoke (no re-claim)</button></td></tr>
               } @empty {
                 <tr><td colspan="5">No sub claims yet</td></tr>
               }

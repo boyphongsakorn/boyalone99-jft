@@ -41,6 +41,7 @@ export class Admin implements OnInit {
   protected readonly redemptions = signal<any[]>([]);
   protected readonly coinHistory = signal<any[]>([]);
   protected readonly subClaims = signal<any[]>([]);
+  protected historyUserFilter = '';
   protected readonly notice = signal<string | null>(null);
   protected readonly loading = signal(false);
   protected readonly eventsubStatus = signal<any[] | null>(null);
@@ -268,6 +269,37 @@ export class Admin implements OnInit {
       this.subClaims.set(res ?? []);
     } catch (e: any) {
       this.notice.set(e?.error?.error || 'Load sub claims failed');
+    }
+  }
+
+  private historyMatch(h: any): boolean {
+    const q = this.historyUserFilter.trim().toLowerCase();
+    if (!q) return true;
+    return [h?.username, h?.user_id, h?.userId, h?.twitch_username]
+      .filter(Boolean).some((v: string) => String(v).toLowerCase().includes(q));
+  }
+
+  protected filteredRedemptions(): any[] {
+    return this.redemptions().filter((h) => this.historyMatch(h));
+  }
+
+  protected filteredCoinHistory(): any[] {
+    return this.coinHistory().filter((h) => this.historyMatch(h));
+  }
+
+  protected filteredSubClaims(): any[] {
+    return this.subClaims().filter((h) => this.historyMatch(h));
+  }
+
+  protected async revokeSubClaim(userId: string, platform: string) {
+    const monthKey = (platform.split(':')[1] || '').trim();
+    if (typeof window !== 'undefined' && !window.confirm(`Revoke sub claim ${platform} for ${userId}? Coins reversed, user CANNOT re-claim.`)) return;
+    try {
+      const res: any = await this.http.post(`${environment.apiUrl}/admin/sub-claims/revoke`, { userId, monthKey: /^\d{4}-\d{2}$/.test(monthKey) ? monthKey : undefined }).toPromise();
+      this.notice.set(`Revoked sub ${res.monthKey} for ${userId} (${res.reverted} AC). No re-claim.`);
+      await this.refreshHistory();
+    } catch (e: any) {
+      this.notice.set(e?.error?.error || 'Sub revoke failed');
     }
   }
 
