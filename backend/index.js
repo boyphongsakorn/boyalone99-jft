@@ -675,16 +675,14 @@ app.get('/follow/twitchsub', async (req, res) => {
     const monthsClaimed = Number(monthCount[0]?.n || 0);
     const baseAmount = Number(process.env.TWITCH_SUB_AC || 200);
     const twitchMonths = await getTwitchTenure(users[0].twitch_id);
-    const tenureQ = Number(req.query.tenure ?? req.query.months);
-    const tenureHint = Number.isInteger(tenureQ) && tenureQ >= 1 && tenureQ <= 120 ? tenureQ : 0;
-    const effectiveNext = Math.max(monthsClaimed + 1, twitchMonths, tenureHint);
+    const effectiveNext = Math.max(monthsClaimed + 1, twitchMonths);
     const tenureAuto = twitchMonths > 0;
     try {
       const data = await twitchHelix('get', '/subscriptions', {
         params: { broadcaster_id: process.env.TWITCH_BROADCASTER_ID, user_id: users[0].twitch_id },
       });
       const sub = (data.data || [])[0] || null;
-      res.json({ subscribed: !!sub, tier: sub?.tier || null, isGift: sub?.is_gift ?? null, claimed: claimedThisMonth, monthKey, monthsClaimed, baseAmount, twitchMonths: twitchMonths || null, tenureSource: twitchMonths > 0 ? 'twitch' : (tenureHint > 0 ? 'manual' : 'streak'), tenureAuto, needsTenureInput: !!sub && !claimedThisMonth && twitchMonths === 0 && monthsClaimed === 0, nextAmount: baseAmount * effectiveNext, effectiveTenure: effectiveNext, subscribeUrl: 'https://www.twitch.tv/subs/boyalone99' });
+      res.json({ subscribed: !!sub, tier: sub?.tier || null, isGift: sub?.is_gift ?? null, claimed: claimedThisMonth, monthKey, monthsClaimed, baseAmount, twitchMonths: twitchMonths || null, tenureSource: twitchMonths > 0 ? 'twitch' : 'streak', tenureAuto, nextAmount: baseAmount * effectiveNext, effectiveTenure: effectiveNext, subscribeUrl: 'https://www.twitch.tv/subs/boyalone99' });
     } catch (e) {
       if (e.status === 403 || e.response?.status === 403) {
         return res.json({ subscribed: null, reason: 'missing_scope', claimed: claimedThisMonth, monthKey, monthsClaimed, baseAmount, twitchMonths: twitchMonths || null, tenureSource: twitchMonths > 0 ? 'twitch' : 'streak', tenureAuto, needsTenureInput: false, nextAmount: baseAmount * effectiveNext, effectiveTenure: effectiveNext, subscribeUrl: 'https://www.twitch.tv/subs/boyalone99' });
@@ -769,9 +767,9 @@ app.post('/claim/follow', async (req, res) => {
     }
     const amounts = { twitch: 100, youtube: 100, booster: 150, lfg: 100, twitchsub: Number(process.env.TWITCH_SUB_AC || 200) };
     // Twitch sub is re-claimable every calendar month while sub is active.
-    // Helix /subscriptions exposes no tenure field, so payout = base x streak:
-    // 1st month = base x 1, 2nd month = base x 2, ... (streak = prior twitchsub claims + 1)
-    // If client supplies tenure (e.g. 3 months) the first claim pays base x tenure (600) and prior-month locks are auto-seeded.
+    // Helix /subscriptions exposes no tenure field — tenure comes from the
+    // twitch_sub_tenure table (EventSub channel.subscription.message cumulative_months).
+    // Payout = base x max(prior claim streak + 1, twitch tenure).
     const isSubMonth = platform === 'twitchsub';
     const claimPlatform = isSubMonth ? `twitchsub:${new Date().toISOString().slice(0, 7)}` : platform;
     let amount = amounts[platform];
@@ -783,9 +781,7 @@ app.post('/claim/follow', async (req, res) => {
       streak = originalStreak;
       const [tu] = await pool.query('SELECT twitch_id FROM users WHERE id = ?', [userId]);
       const twitchMonths = tu[0]?.twitch_id ? await getTwitchTenure(tu[0].twitch_id) : 0;
-      const tenureParam = Number(req.body.tenure ?? req.body.months);
-      const tenureHint = Number.isInteger(tenureParam) && tenureParam >= 1 && tenureParam <= 120 ? tenureParam : 0;
-      effectiveTenure = Math.max(originalStreak + 1, twitchMonths, tenureHint);
+      effectiveTenure = Math.max(originalStreak + 1, twitchMonths);
       amount = amounts[platform] * effectiveTenure;
       // auto-seed prior-month locks so a 3-month sub claiming first time gets 600 and streak stays consistent
       if (effectiveTenure > originalStreak + 1) {
