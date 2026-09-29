@@ -189,6 +189,7 @@ export class Admin implements OnInit {
       if (redemptions) this.redemptions.set(redemptions);
       if (coins) this.coinHistory.set(coins);
       if (subs) this.subClaims.set(subs);
+      this.pruneHistoryFilters();
       if (settings) {
         const row: any = (settings as any[]).find((s: any) => s.key === 'claim_enabled');
         this.claimEnabled.set(!row || row.value !== '0');
@@ -277,7 +278,9 @@ export class Admin implements OnInit {
 
   private historyMatch(h: any, userId: string): boolean {
     if (!userId) return true;
-    return h?.user_id === userId || h?.userId === userId;
+    const id = h?.user_id ?? h?.userId;
+    if (id === undefined || id === null) return false;
+    return String(id) === String(userId);
   }
 
   protected filteredRedemptions(): any[] {
@@ -290,6 +293,47 @@ export class Admin implements OnInit {
 
   protected filteredSubClaims(): any[] {
     return this.subClaims().filter((h) => this.historyMatch(h, this.subUserFilter));
+  }
+
+  private historyUsers(rows: any[]): { id: string; username: string; count: number }[] {
+    // Only users that actually appear in this box's history rows.
+    const nameById = new Map<string, string>();
+    for (const u of this.users()) nameById.set(String(u.id), u.username);
+    const map = new Map<string, { username: string; count: number }>();
+    for (const h of rows) {
+      const id = h?.user_id ?? h?.userId;
+      if (id === undefined || id === null || id === '') continue;
+      const key = String(id);
+      const entry = map.get(key);
+      const label = nameById.get(key) || h?.username || h?.twitch_username || key;
+      if (entry) entry.count += 1;
+      else map.set(key, { username: label, count: 1 });
+    }
+    return [...map.entries()]
+      .map(([id, v]) => ({ id, username: v.username, count: v.count }))
+      .sort((a, b) => a.username.localeCompare(b.username));
+  }
+
+  protected redemptionUsers(): { id: string; username: string; count: number }[] {
+    return this.historyUsers(this.redemptions());
+  }
+
+  protected coinUsers(): { id: string; username: string; count: number }[] {
+    return this.historyUsers(this.coinHistory());
+  }
+
+  protected subClaimUsers(): { id: string; username: string; count: number }[] {
+    return this.historyUsers(this.subClaims());
+  }
+
+  private pruneHistoryFilters(): void {
+    // Drop a selected user if they no longer have history in that box
+    // (e.g. after rollback/refresh) so the list never sits on 0 rows.
+    const valid = (list: { id: string }[], current: string) =>
+      !current || list.some((u) => u.id === current) ? current : '';
+    this.redemptionUserFilter = valid(this.redemptionUsers(), this.redemptionUserFilter);
+    this.coinUserFilter = valid(this.coinUsers(), this.coinUserFilter);
+    this.subUserFilter = valid(this.subClaimUsers(), this.subUserFilter);
   }
 
   protected async revokeSubClaim(userId: string, platform: string) {
@@ -356,6 +400,7 @@ export class Admin implements OnInit {
       if (redemptions) this.redemptions.set(redemptions);
       if (coins) this.coinHistory.set(coins);
       if (subs) this.subClaims.set(subs);
+      this.pruneHistoryFilters();
     } catch (e) {
       console.error(e);
     }
