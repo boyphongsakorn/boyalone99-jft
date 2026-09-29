@@ -514,6 +514,37 @@ app.get('/follow/twitch', async (req, res) => {
   }
 });
 
+// Check if linked user is subscribed to boyalone99 on Twitch (Helix subscriptions)
+// Needs broadcaster token with channel:read:subscriptions scope
+// GET /follow/twitchsub?userId=<main id>
+app.get('/follow/twitchsub', async (req, res) => {
+  try {
+    const userId = req.query.userId ? String(req.query.userId) : null;
+    if (!userId) return res.status(400).json({ error: 'Missing userId' });
+    const [users] = await pool.query('SELECT twitch_id FROM users WHERE id = ?', [userId]);
+    if (users.length === 0 || !users[0].twitch_id) {
+      return res.json({ subscribed: false, reason: 'twitch_not_linked', subscribeUrl: 'https://www.twitch.tv/subs/boyalone99' });
+    }
+    const [claimed] = await pool.query('SELECT 1 FROM claimed_follows WHERE user_id = ? AND platform = ?', [userId, 'twitchsub']);
+    try {
+      const data = await twitchHelix('get', '/subscriptions', {
+        params: { broadcaster_id: process.env.TWITCH_BROADCASTER_ID, user_id: users[0].twitch_id },
+      });
+      const sub = (data.data || [])[0] || null;
+      res.json({ subscribed: !!sub, tier: sub?.tier || null, isGift: sub?.is_gift ?? null, claimed: claimed.length > 0, subscribeUrl: 'https://www.twitch.tv/subs/boyalone99' });
+    } catch (e) {
+      if (e.status === 403 || e.response?.status === 403) {
+        return res.json({ subscribed: null, reason: 'missing_scope', claimed: claimed.length > 0, subscribeUrl: 'https://www.twitch.tv/subs/boyalone99' });
+      }
+      throw e;
+    }
+  } catch (error) {
+    console.error('Twitch Sub Check Error:', error.response?.data || error.message);
+    const upstream = error.response?.status;
+    res.status(upstream || error.status || 500).json({ error: error.response?.data?.message || error.message || 'Failed to check Twitch subscription' });
+  }
+});
+
 // Check YouTube sub — API key cannot verify viewer, return link + claimed state
 // GET /follow/youtube?userId=<main id>
 app.get('/follow/youtube', async (req, res) => {
@@ -580,16 +611,29 @@ app.get('/discord/roles', async (req, res) => {
 app.post('/claim/follow', async (req, res) => {
   try {
     const { userId, platform } = req.body;
-    if (!userId || !['twitch', 'youtube', 'booster', 'lfg'].includes(platform)) {
-      return res.status(400).json({ error: 'userId and platform (twitch|youtube|booster|lfg) required' });
+    if (!userId || !['twitch', 'youtube', 'booster', 'lfg', 'twitchsub'].includes(platform)) {
+      return res.status(400).json({ error: 'userId and platform (twitch|youtube|booster|lfg|twitchsub) required' });
     }
-    const amounts = { twitch: 100, youtube: 100, booster: 150, lfg: 100 };
+    const amounts = { twitch: 100, youtube: 100, booster: 150, lfg: 100, twitchsub: Number(process.env.TWITCH_SUB_AC || 200) };
     const amount = amounts[platform];
     const [claimed] = await pool.query('SELECT 1 FROM claimed_follows WHERE user_id = ? AND platform = ?', [userId, platform]);
     if (claimed.length > 0) return res.status(400).json({ error: 'Already claimed' });
-    if (platform === 'twitch') {
+    if (platform === 'twitch' || platform === 'twitchsub') {
       const [users] = await pool.query('SELECT twitch_id FROM users WHERE id = ?', [userId]);
       if (users.length === 0 || !users[0].twitch_id) return res.status(400).json({ error: 'Twitch not linked' });
+      if (platform === 'twitchsub') {
+        try {
+          const data = await twitchHelix('get', '/subscriptions', {
+            params: { broadcaster_id: process.env.TWITCH_BROADCASTER_ID, user_id: users[0].twitch_id },
+          });
+          if (!(data.data || []).length) return res.status(400).json({ error: 'No active Twitch subscription found — subscribe first' });
+        } catch (e) {
+          if (e.status === 403 || e.response?.status === 403) {
+            return res.status(400).json({ error: 'Broadcaster token missing channel:read:subscriptions — re-auth with sub scope' });
+          }
+          throw e;
+        }
+      }
     }
     if (platform === 'booster' || platform === 'lfg') {
       const guildId = process.env.DISCORD_GUILD_ID;

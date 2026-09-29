@@ -22,6 +22,9 @@ export class AloneCoin implements OnInit {
   protected readonly hasLfg = signal<boolean | null>(null);
   protected readonly boosterClaimed = signal(false);
   protected readonly lfgClaimed = signal(false);
+  protected readonly hasSub = signal<boolean | null>(null);
+  protected readonly subClaimed = signal(false);
+  protected readonly subUrl = signal('https://www.twitch.tv/subs/boyalone99');
   protected readonly channelPending = signal(0);
   protected readonly channelRedeemable = signal(false);
   protected readonly notice = signal<string | null>(null);
@@ -56,11 +59,12 @@ export class AloneCoin implements OnInit {
     if (!id) return;
     this.checking.set(true);
     try {
-      const [tw, yt, roles, cp]: any[] = await Promise.all([
+      const [tw, yt, roles, cp, sub]: any[] = await Promise.all([
         this.http.get(`${environment.apiUrl}/follow/twitch?userId=${encodeURIComponent(id)}`).toPromise(),
         this.http.get(`${environment.apiUrl}/follow/youtube?userId=${encodeURIComponent(id)}`).toPromise(),
         this.http.get(`${environment.apiUrl}/discord/roles?userId=${encodeURIComponent(id)}`).toPromise().catch(() => null),
         this.http.get(`${environment.apiUrl}/twitch/channel-points?userId=${encodeURIComponent(id)}`).toPromise().catch(() => null),
+        this.http.get(`${environment.apiUrl}/follow/twitchsub?userId=${encodeURIComponent(id)}`).toPromise().catch(() => null),
       ]);
       if (tw?.followUrl) this.twitchUrl.set(tw.followUrl);
       if (yt?.channelUrl) this.youtubeUrl.set(yt.channelUrl);
@@ -82,6 +86,12 @@ export class AloneCoin implements OnInit {
       if (cp) {
         this.channelRedeemable.set(cp.redeemable === true);
         this.channelPending.set(cp.pending ?? 0);
+      }
+      if (sub) {
+        if (sub.subscribeUrl) this.subUrl.set(sub.subscribeUrl);
+        if (sub.reason === 'twitch_not_linked') this.hasSub.set(false);
+        else this.hasSub.set(sub.subscribed === true);
+        if (sub.claimed) this.subClaimed.set(true);
       }
     } catch {
       /* keep defaults, claim will surface error */
@@ -106,7 +116,7 @@ export class AloneCoin implements OnInit {
     }
   }
 
-  protected async claim(platform: 'twitch' | 'youtube' | 'booster' | 'lfg'): Promise<void> {
+  protected async claim(platform: 'twitch' | 'youtube' | 'booster' | 'lfg' | 'twitchsub'): Promise<void> {
     const id = this.userId();
     if (!id) {
       this.notice.set('กรุณาล็อกอินก่อนรับเหรียญ');
@@ -116,11 +126,12 @@ export class AloneCoin implements OnInit {
       const res: any = await this.http
         .post(`${environment.apiUrl}/claim/follow`, { userId: id, platform })
         .toPromise();
-      const amounts: Record<string, number> = { twitch: 100, youtube: 100, booster: 150, lfg: 100 };
+      const amounts: Record<string, number> = { twitch: 100, youtube: 100, booster: 150, lfg: 100, twitchsub: 200 };
       this.notice.set(`รับ +${amounts[platform]} AC สำเร็จ! ยอดคงเหลือ ${res.balance} AC`);
       if (platform === 'twitch') this.twitchClaimed.set(true);
       else if (platform === 'youtube') this.youtubeClaimed.set(true);
       else if (platform === 'booster') this.boosterClaimed.set(true);
+      else if (platform === 'twitchsub') this.subClaimed.set(true);
       else this.lfgClaimed.set(true);
     } catch (e: any) {
       this.notice.set(e?.error?.error || 'รับเหรียญไม่สำเร็จ');

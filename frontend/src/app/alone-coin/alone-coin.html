@@ -75,6 +75,21 @@
         <div>
           <h3>สมัครสมาชิก Twitch</h3>
           <p>สนับสนุนครีเอเตอร์ด้วยการซับ เพื่อปลดล็อกของรางวัลเพิ่มเติม</p>
+          <div class="claim-row">
+            @if (!isLoggedIn()) {
+              <a class="claim-btn" routerLink="/login">ล็อกอินเพื่อรับ</a>
+            } @else {
+              <a class="claim-btn" [href]="subUrl()" target="_blank" rel="noopener">สมัครสมาชิก Twitch</a>
+              <button type="button" class="claim-btn primary" (click)="claim('twitchsub')" [disabled]="subClaimed() || checking()">
+                {{ subClaimed() ? 'รับแล้ว ✓' : 'รับ +200 AC (Sub)' }}
+              </button>
+            }
+          </div>
+          @if (!twitchLinked() && isLoggedIn()) {
+            <p class="claim-hint">ยังไม่ได้เชื่อม Twitch — ไปที่ <a routerLink="/profile">โปรไฟล์ → Link Twitch</a> ก่อน แล้วกดรับอีกครั้ง</p>
+          } @else if (hasSub() === false && isLoggedIn()) {
+            <p class="claim-hint">ยังไม่พบการซับ — กดสมัครสมาชิกก่อนแล้วกดรับอีกครั้ง</p>
+          }
         </div>
         <strong>+200 AC</strong>
       </li>
