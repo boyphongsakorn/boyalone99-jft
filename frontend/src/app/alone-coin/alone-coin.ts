@@ -27,6 +27,8 @@ export class AloneCoin implements OnInit {
   protected readonly subUrl = signal('https://www.twitch.tv/subs/boyalone99');
   protected readonly subMonths = signal(0);
   protected readonly subNextAmount = signal(200);
+  protected readonly subBase = signal(200);
+  protected readonly subTenure = signal(1);
   protected readonly channelPending = signal(0);
   protected readonly channelRedeemable = signal(false);
   protected readonly notice = signal<string | null>(null);
@@ -66,7 +68,7 @@ export class AloneCoin implements OnInit {
         this.http.get(`${environment.apiUrl}/follow/youtube?userId=${encodeURIComponent(id)}`).toPromise(),
         this.http.get(`${environment.apiUrl}/discord/roles?userId=${encodeURIComponent(id)}`).toPromise().catch(() => null),
         this.http.get(`${environment.apiUrl}/twitch/channel-points?userId=${encodeURIComponent(id)}`).toPromise().catch(() => null),
-        this.http.get(`${environment.apiUrl}/follow/twitchsub?userId=${encodeURIComponent(id)}`).toPromise().catch(() => null),
+        this.http.get(`${environment.apiUrl}/follow/twitchsub?userId=${encodeURIComponent(id)}&tenure=${this.subTenure()}`).toPromise().catch(() => null),
       ]);
       if (tw?.followUrl) this.twitchUrl.set(tw.followUrl);
       if (yt?.channelUrl) this.youtubeUrl.set(yt.channelUrl);
@@ -95,6 +97,8 @@ export class AloneCoin implements OnInit {
         else this.hasSub.set(sub.subscribed === true);
         if (sub.claimed) this.subClaimed.set(true);
         if (typeof sub.monthsClaimed === 'number') this.subMonths.set(sub.monthsClaimed);
+        if (typeof sub.baseAmount === 'number') this.subBase.set(sub.baseAmount);
+        if (typeof sub.effectiveTenure === 'number') this.subTenure.set(sub.effectiveTenure);
         if (typeof sub.nextAmount === 'number') this.subNextAmount.set(sub.nextAmount);
       }
     } catch {
@@ -120,6 +124,12 @@ export class AloneCoin implements OnInit {
     }
   }
 
+  protected setTenure(v: string): void {
+    const n = Math.max(1, Math.min(120, Math.floor(Number(v) || 1)));
+    this.subTenure.set(n);
+    this.subNextAmount.set(this.subBase() * Math.max(this.subMonths() + 1, n));
+  }
+
   protected async claim(platform: 'twitch' | 'youtube' | 'booster' | 'lfg' | 'twitchsub'): Promise<void> {
     const id = this.userId();
     if (!id) {
@@ -127,8 +137,9 @@ export class AloneCoin implements OnInit {
       return;
     }
     try {
+      const body: any = platform === 'twitchsub' ? { userId: id, platform, tenure: this.subTenure() } : { userId: id, platform };
       const res: any = await this.http
-        .post(`${environment.apiUrl}/claim/follow`, { userId: id, platform })
+        .post(`${environment.apiUrl}/claim/follow`, body)
         .toPromise();
       const amounts: Record<string, number> = { twitch: 100, youtube: 100, booster: 150, lfg: 100, twitchsub: res.granted ?? 200 };
       this.notice.set(res.monthsClaimed ? `รับ +${res.granted} AC (ซับเดือนที่ ${res.monthsClaimed}) สำเร็จ! ยอดคงเหลือ ${res.balance} AC` : `รับ +${amounts[platform]} AC สำเร็จ! ยอดคงเหลือ ${res.balance} AC`);

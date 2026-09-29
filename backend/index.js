@@ -674,15 +674,17 @@ app.get('/follow/twitchsub', async (req, res) => {
     );
     const monthsClaimed = Number(monthCount[0]?.n || 0);
     const baseAmount = Number(process.env.TWITCH_SUB_AC || 200);
+    const tenureQ = Number(req.query.tenure ?? req.query.months);
+    const effectiveNext = Number.isInteger(tenureQ) && tenureQ >= 1 && tenureQ <= 120 ? Math.max(monthsClaimed + 1, tenureQ) : monthsClaimed + 1;
     try {
       const data = await twitchHelix('get', '/subscriptions', {
         params: { broadcaster_id: process.env.TWITCH_BROADCASTER_ID, user_id: users[0].twitch_id },
       });
       const sub = (data.data || [])[0] || null;
-      res.json({ subscribed: !!sub, tier: sub?.tier || null, isGift: sub?.is_gift ?? null, claimed: claimedThisMonth, monthKey, monthsClaimed, baseAmount, nextAmount: baseAmount * (monthsClaimed + 1), subscribeUrl: 'https://www.twitch.tv/subs/boyalone99' });
+      res.json({ subscribed: !!sub, tier: sub?.tier || null, isGift: sub?.is_gift ?? null, claimed: claimedThisMonth, monthKey, monthsClaimed, baseAmount, nextAmount: baseAmount * effectiveNext, effectiveTenure: effectiveNext, subscribeUrl: 'https://www.twitch.tv/subs/boyalone99' });
     } catch (e) {
       if (e.status === 403 || e.response?.status === 403) {
-        return res.json({ subscribed: null, reason: 'missing_scope', claimed: claimedThisMonth, monthKey, monthsClaimed, baseAmount, nextAmount: baseAmount * (monthsClaimed + 1), subscribeUrl: 'https://www.twitch.tv/subs/boyalone99' });
+        return res.json({ subscribed: null, reason: 'missing_scope', claimed: claimedThisMonth, monthKey, monthsClaimed, baseAmount, nextAmount: baseAmount * effectiveNext, effectiveTenure: effectiveNext, subscribeUrl: 'https://www.twitch.tv/subs/boyalone99' });
       }
       throw e;
     }
@@ -766,14 +768,43 @@ app.post('/claim/follow', async (req, res) => {
     // Twitch sub is re-claimable every calendar month while sub is active.
     // Helix /subscriptions exposes no tenure field, so payout = base x streak:
     // 1st month = base x 1, 2nd month = base x 2, ... (streak = prior twitchsub claims + 1)
+    // If client supplies tenure (e.g. 3 months) the first claim pays base x tenure (600) and prior-month locks are auto-seeded.
     const isSubMonth = platform === 'twitchsub';
     const claimPlatform = isSubMonth ? `twitchsub:${new Date().toISOString().slice(0, 7)}` : platform;
     let amount = amounts[platform];
     let streak = 0;
+    let effectiveTenure = 0;
     if (isSubMonth) {
       const [mc] = await pool.query("SELECT COUNT(*) AS n FROM claimed_follows WHERE user_id = ? AND platform LIKE 'twitchsub%'", [userId]);
-      streak = Number(mc[0]?.n || 0);
-      amount = amounts[platform] * (streak + 1);
+      const originalStreak = Number(mc[0]?.n || 0);
+      streak = originalStreak;
+      const tenureParam = Number(req.body.tenure ?? req.body.months);
+      effectiveTenure = originalStreak + 1;
+      if (Number.isInteger(tenureParam) && tenureParam >= 1 && tenureParam <= 120) effectiveTenure = Math.max(effectiveTenure, tenureParam);
+      amount = amounts[platform] * effectiveTenure;
+      // auto-seed prior-month locks so a 3-month sub claiming first time gets 600 and streak stays consistent
+      if (effectiveTenure > originalStreak + 1) {
+        const [existing] = await pool.query("SELECT platform FROM claimed_follows WHERE user_id = ? AND platform LIKE 'twitchsub%'", [userId]);
+        const have = new Set(existing.map((r) => r.platform));
+        const need = effectiveTenure - 1 - originalStreak;
+        let y = new Date().getUTCFullYear();
+        let m = new Date().getUTCMonth() + 1;
+        m -= 1; if (m < 1) { m = 12; y -= 1; }
+        let toCreate = need;
+        let guard = 0;
+        while (toCreate > 0 && guard < 130) {
+          guard++;
+          const key = `${y}-${String(m).padStart(2, '0')}`;
+          const plat = `twitchsub:${key}`;
+          if (!have.has(plat)) {
+            await pool.query('INSERT IGNORE INTO claimed_follows (user_id, platform, claimed_at) VALUES (?, ?, ?)', [userId, plat, `${key}-15 12:00:00`]);
+            have.add(plat);
+            toCreate--;
+          }
+          m -= 1; if (m < 1) { m = 12; y -= 1; }
+        }
+      }
+      streak = effectiveTenure - 1;
     }
     const [claimed] = await pool.query('SELECT 1 FROM claimed_follows WHERE user_id = ? AND platform = ?', [userId, claimPlatform]);
     if (claimed.length > 0) return res.status(400).json({ error: isSubMonth ? 'Already claimed this month — come back next month' : 'Already claimed' });
