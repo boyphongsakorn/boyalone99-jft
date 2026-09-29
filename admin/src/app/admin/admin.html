@@ -142,6 +142,22 @@
           </table>
         </div>
       </div>
+      <div class="card">
+        <h2>Twitch sub claims ({{ subClaims().length }})</h2>
+        <p style="font-size: .78rem; color: var(--muted);">Reset frees the monthly lock so the user can re-claim that month.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>When</th><th>User</th><th>Month</th><th>Granted</th><th></th></tr></thead>
+            <tbody>
+              @for (s of subClaims(); track s.user_id + s.platform) {
+                <tr><td>{{ s.claimed_at }}</td><td>{{ s.username }}<br /><small>{{ s.user_id }}</small></td><td>{{ s.platform }}</td><td>{{ s.granted_ac ?? '-' }} AC</td><td class="actions"><button type="button" class="danger" (click)="resetSubClaim(s.user_id, s.platform)">Reset (re-claim)</button></td></tr>
+              } @empty {
+                <tr><td colspan="5">No sub claims yet</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
     </section>
   }
 

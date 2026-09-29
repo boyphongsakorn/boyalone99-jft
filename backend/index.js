@@ -280,11 +280,85 @@ app.post('/admin/coin-history/:id/rollback', checkAdminAuth, async (req, res) =>
       -orig[0].amount,
       `rollback coin #${id}: ${orig[0].reason || ''}`.slice(0, 255),
     ]);
+    // Free re-claim: follow/sub claims leave a claimed_follows lock — without this
+    // the user can never claim that month again after a rollback
+    let freedClaim = null;
+    const claimMatch = (orig[0].reason || '').match(/^follow (\S+)/);
+    if (claimMatch) {
+      freedClaim = claimMatch[1];
+      await pool.query('DELETE FROM claimed_follows WHERE user_id = ? AND platform = ?', [orig[0].user_id, freedClaim]);
+    }
     const [rows] = await pool.query('SELECT alone_coin FROM users WHERE id = ?', [orig[0].user_id]);
-    res.json({ balance: rows[0]?.alone_coin ?? 0, reverted: -orig[0].amount });
+    res.json({ balance: rows[0]?.alone_coin ?? 0, reverted: -orig[0].amount, freedClaim });
   } catch (error) {
     console.error('Database Error:', error);
     res.status(500).json({ error: 'Failed to rollback' });
+  }
+});
+
+// List Twitch sub monthly claims (admin) — who claimed which month + granted AC
+// GET /admin/sub-claims
+app.get('/admin/sub-claims', checkAdminAuth, async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT c.user_id, c.platform, c.claimed_at, u.username, u.twitch_username,
+              (SELECT h.amount FROM coin_history h
+               WHERE h.user_id = c.user_id AND h.reason LIKE CONCAT('follow ', c.platform, '%')
+               ORDER BY h.created_at DESC LIMIT 1) AS granted_ac
+       FROM claimed_follows c
+       LEFT JOIN users u ON u.id = c.user_id
+       WHERE c.platform LIKE 'twitchsub%'
+       ORDER BY c.claimed_at DESC LIMIT 100`
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to fetch sub claims' });
+  }
+});
+
+// Reset a Twitch sub monthly claim so the user can re-claim that month.
+// Reverses the coin grant (audit entry kept) + deletes the claimed_follows lock
+// (monthly `twitchsub:YYYY-MM` and legacy plain `twitchsub` claimed in that month).
+// POST /admin/sub-claims/reset { userId, monthKey? } — monthKey YYYY-MM, default current month
+app.post('/admin/sub-claims/reset', checkAdminAuth, async (req, res) => {
+  try {
+    const userId = req.body?.userId ? String(req.body.userId) : null;
+    const monthKey = req.body?.monthKey ? String(req.body.monthKey) : new Date().toISOString().slice(0, 7);
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+    if (!/^\d{4}-\d{2}$/.test(monthKey)) return res.status(400).json({ error: 'monthKey must be YYYY-MM' });
+    const monthPlatform = `twitchsub:${monthKey}`;
+    // Find this month's coin grant (monthly row, or legacy plain row created that month)
+    const [grants] = await pool.query(
+      `SELECT id, amount, reason FROM coin_history
+       WHERE user_id = ? AND (reason LIKE ? OR (reason LIKE 'follow twitchsub %' AND DATE_FORMAT(created_at, '%Y-%m') = ?))
+       ORDER BY created_at DESC LIMIT 1`,
+      [userId, `follow ${monthPlatform}%`, monthKey]
+    );
+    let reverted = 0;
+    if (grants.length > 0) {
+      const g = grants[0];
+      const [dup] = await pool.query('SELECT 1 FROM coin_history WHERE reason LIKE ?', [`rollback sub ${userId} ${monthPlatform}%`]);
+      if (dup.length === 0) {
+        await pool.query('UPDATE users SET alone_coin = alone_coin - ? WHERE id = ?', [g.amount, userId]);
+        await pool.query('INSERT INTO coin_history (user_id, amount, reason) VALUES (?, ?, ?)', [
+          userId,
+          -g.amount,
+          `rollback sub ${userId} ${monthPlatform} (coin #${g.id})`.slice(0, 255),
+        ]);
+        reverted = -Number(g.amount);
+      }
+    }
+    await pool.query('DELETE FROM claimed_follows WHERE user_id = ? AND platform = ?', [userId, monthPlatform]);
+    await pool.query(
+      "DELETE FROM claimed_follows WHERE user_id = ? AND platform = 'twitchsub' AND DATE_FORMAT(claimed_at, '%Y-%m') = ?",
+      [userId, monthKey]
+    );
+    const [rows] = await pool.query('SELECT alone_coin FROM users WHERE id = ?', [userId]);
+    res.json({ ok: true, monthKey, reverted, balance: rows[0]?.alone_coin ?? 0 });
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to reset sub claim' });
   }
 });
 

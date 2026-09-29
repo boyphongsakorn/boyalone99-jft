@@ -40,6 +40,7 @@ export class Admin implements OnInit {
   protected readonly users = signal<AdminUser[]>([]);
   protected readonly redemptions = signal<any[]>([]);
   protected readonly coinHistory = signal<any[]>([]);
+  protected readonly subClaims = signal<any[]>([]);
   protected readonly notice = signal<string | null>(null);
   protected readonly loading = signal(false);
   protected readonly eventsubStatus = signal<any[] | null>(null);
@@ -168,17 +169,19 @@ export class Admin implements OnInit {
   async refreshAll() {
     this.loading.set(true);
     try {
-      const [rewards, users, redemptions, coins, settings] = await Promise.all([
+      const [rewards, users, redemptions, coins, settings, subs] = await Promise.all([
         this.http.get<AdminReward[]>(`${environment.apiUrl}/rewards`).toPromise(),
         this.http.get<AdminUser[]>(`${environment.apiUrl}/admin/users`).toPromise(),
         this.http.get<any[]>(`${environment.apiUrl}/admin/redemptions`).toPromise(),
         this.http.get<any[]>(`${environment.apiUrl}/admin/coin-history`).toPromise(),
         this.http.get<any[]>(`${environment.apiUrl}/admin/settings`).toPromise(),
+        this.http.get<any[]>(`${environment.apiUrl}/admin/sub-claims`).toPromise().catch(() => null),
       ]);
       if (rewards) this.rewards.set(rewards);
       if (users) this.users.set(users);
       if (redemptions) this.redemptions.set(redemptions);
       if (coins) this.coinHistory.set(coins);
+      if (subs) this.subClaims.set(subs);
       if (settings) {
         const row: any = (settings as any[]).find((s: any) => s.key === 'claim_enabled');
         this.claimEnabled.set(!row || row.value !== '0');
@@ -249,10 +252,31 @@ export class Admin implements OnInit {
     if (typeof window !== 'undefined' && !window.confirm(`Rollback coin entry #${id}? Balance will be reversed.`)) return;
     try {
       const res: any = await this.http.post(`${environment.apiUrl}/admin/coin-history/${id}/rollback`, {}).toPromise();
-      this.notice.set(`Rolled back coin #${id} (${res.reverted} AC). New balance ${res.balance} AC`);
+      this.notice.set(`Rolled back coin #${id} (${res.reverted} AC). New balance ${res.balance} AC${res.freedClaim ? ` — freed ${res.freedClaim}, user can re-claim` : ''}`);
       await this.refreshHistory();
     } catch (e: any) {
       this.notice.set(e?.error?.error || 'Rollback failed');
+    }
+  }
+
+  protected async loadSubClaims(): Promise<void> {
+    try {
+      const res: any = await this.http.get(`${environment.apiUrl}/admin/sub-claims`).toPromise();
+      this.subClaims.set(res ?? []);
+    } catch (e: any) {
+      this.notice.set(e?.error?.error || 'Load sub claims failed');
+    }
+  }
+
+  protected async resetSubClaim(userId: string, platform: string) {
+    const monthKey = (platform.split(':')[1] || '').trim();
+    if (typeof window !== 'undefined' && !window.confirm(`Reset sub claim ${platform} for ${userId}? User can re-claim that month.`)) return;
+    try {
+      const res: any = await this.http.post(`${environment.apiUrl}/admin/sub-claims/reset`, { userId, monthKey: /^\d{4}-\d{2}$/.test(monthKey) ? monthKey : undefined }).toPromise();
+      this.notice.set(`Reset sub ${res.monthKey} for ${userId} (${res.reverted} AC). User can re-claim now.`);
+      await this.refreshHistory();
+    } catch (e: any) {
+      this.notice.set(e?.error?.error || 'Sub reset failed');
     }
   }
 
@@ -269,12 +293,14 @@ export class Admin implements OnInit {
 
   private async refreshHistory(): Promise<void> {
     try {
-      const [redemptions, coins] = await Promise.all([
+      const [redemptions, coins, subs] = await Promise.all([
         this.http.get<any[]>(`${environment.apiUrl}/admin/redemptions`).toPromise(),
         this.http.get<any[]>(`${environment.apiUrl}/admin/coin-history`).toPromise(),
+        this.http.get<any[]>(`${environment.apiUrl}/admin/sub-claims`).toPromise().catch(() => null),
       ]);
       if (redemptions) this.redemptions.set(redemptions);
       if (coins) this.coinHistory.set(coins);
+      if (subs) this.subClaims.set(subs);
     } catch (e) {
       console.error(e);
     }
