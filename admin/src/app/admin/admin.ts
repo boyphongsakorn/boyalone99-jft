@@ -14,6 +14,7 @@ interface AdminReward {
   icon: string;
   stock: number;
   enabled: number | boolean;
+  contact_type?: 'email' | 'epic_id' | null;
 }
 
 interface AdminUser {
@@ -74,7 +75,7 @@ export class Admin implements OnInit {
   }
 
   private emptyForm(): AdminReward {
-    return { title: '', description: '', cost: 100, accent: 'peach', icon: '✦', stock: 10, enabled: 1 };
+    return { title: '', description: '', cost: 100, accent: 'peach', icon: '✦', stock: 10, enabled: 1, contact_type: null };
   }
 
   protected setTab(t: 'rewards' | 'users' | 'history' | 'settings') {

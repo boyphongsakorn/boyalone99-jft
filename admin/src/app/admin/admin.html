@@ -54,6 +54,13 @@
           </label>
           <label>Icon<input [(ngModel)]="form.icon" placeholder="✦" /></label>
         </div>
+        <label>Delivery Requirement
+          <select [(ngModel)]="form.contact_type">
+            <option [value]="null">None</option>
+            <option value="email">Email Address</option>
+            <option value="epic_id">Epic Games ID</option>
+          </select>
+        </label>
         <div class="setting-row">
           <span class="setting-info">
             <b>Enabled</b>

@@ -13,6 +13,7 @@ interface Reward {
   readonly icon: string;
   readonly stock: number;
   readonly enabled?: number | boolean;
+  readonly contact_type?: 'email' | 'epic_id' | null;
 }
 
 @Component({
@@ -104,6 +105,29 @@ export class Rewards implements OnInit {
     if (!this.canRedeem(reward.cost)) {
       this.notice.set('Alone Coin ยังไม่พอสำหรับรางวัลนี้');
       return;
+    }
+
+    if (reward.contact_type) {
+      const user = JSON.parse(localStorage.getItem('user_profile') || '{}');
+      if (reward.contact_type === 'email' && !user.email) {
+        this.notice.set('กรุณาระบุ Email ในหน้าโปรไฟล์ก่อนแลกรางวัลนี้');
+        this.router.navigateByUrl('/profile');
+        return;
+      }
+      if (reward.contact_type === 'epic_id') {
+        // We need to fetch the latest profile because epic_username might not be in the cached user_profile
+        try {
+          const profile: any = await this.http.get(`${environment.apiUrl}/users/${user.id}`).toPromise();
+          if (!profile?.epic_username) {
+            this.notice.set('กรุณาเพิ่ม Epic Games ID ในหน้าโปรไฟล์ และเพิ่ม BoyAlone99 เป็นเพื่อนใน Epic Games');
+            this.router.navigateByUrl('/profile');
+            return;
+          }
+        } catch (e) {
+          this.notice.set('ไม่สามารถตรวจสอบข้อมูลโปรไฟล์ได้');
+          return;
+        }
+      }
     }
 
     try {

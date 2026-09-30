@@ -218,11 +218,11 @@ app.post('/admin/users/:id/coins', checkAdminAuth, async (req, res) => {
 // Create reward
 app.post('/admin/rewards', checkAdminAuth, async (req, res) => {
   try {
-    const { title, description, cost, accent, icon, stock, enabled } = req.body;
+    const { title, description, cost, accent, icon, stock, enabled, contact_type } = req.body;
     if (!title || cost === undefined) return res.status(400).json({ error: 'title and cost required' });
     const [result] = await pool.query(
-      'INSERT INTO rewards (title, description, cost, accent, icon, stock, enabled) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [title, description || '', Number(cost) || 0, accent || 'peach', icon || '✦', Number(stock) || 0, enabled === false || enabled === 0 || enabled === '0' ? 0 : 1]
+      'INSERT INTO rewards (title, description, cost, accent, icon, stock, enabled, contact_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [title, description || '', Number(cost) || 0, accent || 'peach', icon || '✦', Number(stock) || 0, enabled === false || enabled === 0 || enabled === '0' ? 0 : 1, contact_type || null]
     );
     const [rows] = await pool.query('SELECT *, (enabled <> 0) AS enabled FROM rewards WHERE id = ?', [result.insertId]);
     res.status(201).json(rows[0]);
@@ -236,10 +236,10 @@ app.post('/admin/rewards', checkAdminAuth, async (req, res) => {
 app.put('/admin/rewards/:id', checkAdminAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, cost, accent, icon, stock, enabled } = req.body;
+    const { title, description, cost, accent, icon, stock, enabled, contact_type } = req.body;
     await pool.query(
-      'UPDATE rewards SET title = ?, description = ?, cost = ?, accent = ?, icon = ?, stock = ?, enabled = ? WHERE id = ?',
-      [title, description || '', Number(cost) || 0, accent || 'peach', icon || '✦', Number(stock) || 0, enabled === false || enabled === 0 || enabled === '0' ? 0 : 1, id]
+      'UPDATE rewards SET title = ?, description = ?, cost = ?, accent = ?, icon = ?, stock = ?, enabled = ?, contact_type = ? WHERE id = ?',
+      [title, description || '', Number(cost) || 0, accent || 'peach', icon || '✦', Number(stock) || 0, enabled === false || enabled === 0 || enabled === '0' ? 0 : 1, contact_type || null, id]
     );
     const [rows] = await pool.query('SELECT *, (enabled <> 0) AS enabled FROM rewards WHERE id = ?', [id]);
     if (rows.length === 0) return res.status(404).json({ error: 'Reward not found' });
