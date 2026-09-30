@@ -48,7 +48,7 @@ h1 em { color: var(--coral); font-style: normal; }
 .form-actions { display: flex; gap: 10px; margin-top: 8px; }
 button.primary { background: var(--ink); border: 2px solid var(--ink); border-radius: 4px 8px 4px 6px; color: var(--paper); cursor: pointer; font: 700 .8rem inherit; padding: 8px 16px; }
 button.primary:hover { background: var(--coral); border-color: var(--coral); }
-.card button:not(.primary):not(.danger):not(.tabs button) { background: #fff; border: 2px solid var(--ink); border-radius: 4px 8px 4px 6px; cursor: pointer; font: 700 .75rem inherit; padding: 6px 12px; }
+.card button:not(.primary):not(.danger):not(.switch):not(.tabs button) { background: #fff; border: 2px solid var(--ink); border-radius: 4px 8px 4px 6px; cursor: pointer; font: 700 .75rem inherit; padding: 6px 12px; }
 button.danger { background: #fff; border: 2px solid var(--coral); border-radius: 4px 8px 4px 6px; color: var(--coral); cursor: pointer; font: 700 .75rem inherit; padding: 6px 12px; }
 button.danger:hover { background: var(--coral); color: #fff; }
 .table-wrap { overflow-x: auto; }
