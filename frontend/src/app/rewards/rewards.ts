@@ -172,6 +172,10 @@ export class Rewards implements OnInit {
       }).toPromise();
 
       this.balance.set(res.balance);
+      // Update local stock so the card shows the new count immediately
+      this.rewards.set(this.rewards().map((r) =>
+        r.id === reward.id ? { ...r, stock: Math.max(0, r.stock - 1) } : r
+      ));
       this.notice.set(`แลกรางวัล ${reward.title} สำเร็จแล้ว! กำลังดำเนินการจัดส่ง`);
     } catch (e: any) {
       this.notice.set(e?.error?.error || 'การแลกรางวัลล้มเหลว');

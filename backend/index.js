@@ -173,6 +173,7 @@ app.post('/redeem', async (req, res) => {
     const r = reward[0];
 
     if (r.enabled === 0) return res.status(400).json({ error: 'Reward is currently disabled' });
+    if (Number(r.stock) <= 0) return res.status(400).json({ error: 'Reward is out of stock' });
 
     const [user] = await pool.query('SELECT alone_coin FROM users WHERE id = ?', [userId]);
     if (user.length === 0) return res.status(404).json({ error: 'User not found' });
@@ -183,6 +184,7 @@ app.post('/redeem', async (req, res) => {
       'INSERT INTO redemption_history (user_id, reward_id, status) VALUES (?, ?, ?)',
       [userId, rewardId, 'processing']
     );
+    await pool.query('UPDATE rewards SET stock = stock - 1 WHERE id = ? AND stock > 0', [rewardId]);
     await pool.query('INSERT INTO coin_history (user_id, amount, reason) VALUES (?, ?, ?)', [
       userId, -r.cost, `redeem: ${r.title}`
     ]);
