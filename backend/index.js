@@ -28,6 +28,17 @@ const pool = mysql.createPool({
 
 const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || crypto.randomBytes(32).toString('hex');
 
+// Startup migration — add missing columns for DBs created before they existed
+// (runs once at boot so admin PUT/POST and GET /rewards never 500 on first use)
+(async () => {
+  const backfill = async (sql) => {
+    try { await pool.query(sql); } catch (e) {
+      if (e.code !== 'ER_DUP_FIELDNAME') console.error('Migration warning:', e.sqlMessage || e.message);
+    }
+  };
+  await backfill("ALTER TABLE rewards ADD COLUMN contact_type VARCHAR(50) NULL");
+})();
+
 // Middleware to check Admin Auth
 const checkAdminAuth = (req, res, next) => {
   const token = req.headers['x-admin-token'];
@@ -49,8 +60,13 @@ app.get('/health', (req, res) => {
 // Get all rewards from Database (admin sees all via same list; frontend filters disabled)
 app.get('/rewards', async (req, res) => {
   try {
-    // Backfill for DBs created before the enabled column existed
+    // Backfill for DBs created before the enabled / contact_type columns existed
     await pool.query('ALTER TABLE rewards ADD COLUMN IF NOT EXISTS enabled TINYINT(1) NOT NULL DEFAULT 1').catch(() => {});
+    await pool.query("ALTER TABLE rewards ADD COLUMN IF NOT EXISTS contact_type VARCHAR(50) NULL").catch(() => {});
+    // Fallback for MySQL (no IF NOT EXISTS support) — ignore duplicate-column error
+    await pool.query("ALTER TABLE rewards ADD COLUMN contact_type VARCHAR(50) NULL").catch((e) => {
+      if (e.code !== 'ER_DUP_FIELDNAME') throw e;
+    });
     const [rows] = await pool.query('SELECT *, (enabled <> 0) AS enabled FROM rewards');
     res.json(rows);
   } catch (error) {

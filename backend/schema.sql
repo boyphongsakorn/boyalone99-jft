@@ -25,9 +25,11 @@ CREATE TABLE IF NOT EXISTS rewards (
     icon VARCHAR(10),
     stock INT DEFAULT 0,
     enabled TINYINT(1) NOT NULL DEFAULT 1,
+    contact_type VARCHAR(50) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ALTER TABLE rewards ADD COLUMN IF NOT EXISTS enabled TINYINT(1) NOT NULL DEFAULT 1;
+ALTER TABLE rewards ADD COLUMN IF NOT EXISTS contact_type VARCHAR(50) NULL;
 
 -- Redemption History Table
 CREATE TABLE IF NOT EXISTS redemption_history (
