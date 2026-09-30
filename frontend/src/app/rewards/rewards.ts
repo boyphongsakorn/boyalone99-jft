@@ -29,6 +29,8 @@ export class Rewards implements OnInit {
   protected readonly rewards = signal<readonly Reward[]>([]);
   protected readonly loading = signal(true);
   protected readonly claimEnabled = signal(false);
+  protected readonly profileEmail = signal<string | null>(null);
+  protected readonly profileEpic = signal<string | null>(null);
 
   constructor(private http: HttpClient, private router: Router) {
     if (typeof window !== 'undefined') {
@@ -66,7 +68,39 @@ export class Rewards implements OnInit {
 
     if (this.isLoggedIn()) {
       await this.fetchBalance();
+      await this.fetchProfileContact();
     }
+  }
+
+  async fetchProfileContact() {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = localStorage.getItem('user_profile');
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!parsed?.id) return;
+      const profile: any = await this.http.get(`${environment.apiUrl}/users/${encodeURIComponent(parsed.id)}`).toPromise();
+      this.profileEmail.set(profile?.email || null);
+      this.profileEpic.set(profile?.epic_username || null);
+    } catch (e) {
+      console.error('Failed to fetch profile contact', e);
+    }
+  }
+
+  protected needsEmail(reward: Reward): boolean {
+    return reward.contact_type === 'email';
+  }
+
+  protected needsEpic(reward: Reward): boolean {
+    return reward.contact_type === 'epic_id';
+  }
+
+  protected missingEmail(reward: Reward): boolean {
+    return this.needsEmail(reward) && this.isLoggedIn() && !this.profileEmail();
+  }
+
+  protected missingEpic(reward: Reward): boolean {
+    return this.needsEpic(reward) && this.isLoggedIn() && !this.profileEpic();
   }
 
   async fetchBalance() {
@@ -108,25 +142,25 @@ export class Rewards implements OnInit {
     }
 
     if (reward.contact_type) {
-      const user = JSON.parse(localStorage.getItem('user_profile') || '{}');
-      if (reward.contact_type === 'email' && !user.email) {
-        this.notice.set('กรุณาระบุ Email ในหน้าโปรไฟล์ก่อนแลกรางวัลนี้');
-        this.router.navigateByUrl('/profile');
-        return;
-      }
-      if (reward.contact_type === 'epic_id') {
-        // We need to fetch the latest profile because epic_username might not be in the cached user_profile
-        try {
-          const profile: any = await this.http.get(`${environment.apiUrl}/users/${user.id}`).toPromise();
-          if (!profile?.epic_username) {
-            this.notice.set('กรุณาเพิ่ม Epic Games ID ในหน้าโปรไฟล์ และเพิ่ม BoyAlone99 เป็นเพื่อนใน Epic Games');
-            this.router.navigateByUrl('/profile');
-            return;
-          }
-        } catch (e) {
-          this.notice.set('ไม่สามารถตรวจสอบข้อมูลโปรไฟล์ได้');
+      const raw = localStorage.getItem('user_profile') || '{}';
+      let user: any = {};
+      try { user = JSON.parse(raw); } catch { user = {}; }
+      // Always verify against DB (localStorage email is stale / OAuth-cached)
+      try {
+        const profile: any = await this.http.get(`${environment.apiUrl}/users/${encodeURIComponent(user.id)}`).toPromise();
+        this.profileEmail.set(profile?.email || null);
+        this.profileEpic.set(profile?.epic_username || null);
+        if (reward.contact_type === 'email' && !profile?.email) {
+          this.notice.set('⚠ รางวัลนี้ต้องใช้ Email — กรุณาเพิ่ม Email ในหน้า My Profile ก่อนแลก');
           return;
         }
+        if (reward.contact_type === 'epic_id' && !profile?.epic_username) {
+          this.notice.set('⚠ รางวัลนี้ต้องใช้ Epic Games ID — กรุณาเพิ่ม Epic ID ในหน้า My Profile และแอด BoyAlone99 เป็นเพื่อนใน Epic Games');
+          return;
+        }
+      } catch (e) {
+        this.notice.set('ไม่สามารถตรวจสอบข้อมูลโปรไฟล์ได้ ลองใหม่อีกครั้ง');
+        return;
       }
     }
 

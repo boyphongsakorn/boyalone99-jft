@@ -90,7 +90,15 @@ h1 em { color: var(--coral); font-style: normal; }
 .gold { background: #f3e9c9; color: #92752c; }
 .reward-content { flex: 1; }
 .reward-content h3 { font-size: 1.02rem; line-height: 1.15; margin: 0 0 10px; }
-.reward-content p { color: var(--muted); font-size: 0.76rem; line-height: 1.55; margin: 0; }.stock-count { color: var(--muted); font-size: .65rem; font-style: italic; margin-top: 8px; display: block; }.reward-action { align-items: center; border-top: 1px dashed rgba(37, 37, 37, 0.3); display: flex; justify-content: space-between; margin-top: 20px; padding-top: 13px; }
+.reward-content p { color: var(--muted); font-size: 0.76rem; line-height: 1.55; margin: 0; }
+.contact-warnings { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.warning-badge { 
+  background: #fff; border: 1px solid var(--coral); color: var(--coral); 
+  font-size: 0.6rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; 
+  text-transform: uppercase; letter-spacing: 0.05em; 
+}
+.warning-badge.email { border-color: var(--teal); color: var(--teal); }
+.stock-count { color: var(--muted); font-size: .65rem; font-style: italic; margin-top: 8px; display: block; }.reward-action { align-items: center; border-top: 1px dashed rgba(37, 37, 37, 0.3); display: flex; justify-content: space-between; margin-top: 20px; padding-top: 13px; }
 .cost { color: var(--muted); font-size: 0.7rem; }
 .cost b { color: var(--ink); font-size: 1rem; }
 .reward-action button { background: var(--ink); border: 2px solid var(--ink); border-radius: 3px 5px 3px 4px; color: var(--paper); cursor: pointer; font: 600 0.73rem 'Playpen Sans Thai', cursive; padding: 7px 9px; }
