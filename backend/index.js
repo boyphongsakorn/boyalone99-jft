@@ -293,6 +293,9 @@ app.put('/admin/redemptions/:id/status', checkAdminAuth, async (req, res) => {
     res.status(500).json({ error: 'Failed to update status' });
   }
 });
+
+// Redemption history
+app.get('/admin/redemptions', checkAdminAuth, async (req, res) => {
   try {
     const [rows] = await pool.query(
       `SELECT h.id, h.reward_id, h.redeemed_at, u.username, u.id AS user_id, r.title AS reward_title, r.cost AS reward_cost
