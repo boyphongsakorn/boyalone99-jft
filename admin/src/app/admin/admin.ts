@@ -13,6 +13,7 @@ interface AdminReward {
   accent: string;
   icon: string;
   stock: number;
+  enabled: number | boolean;
 }
 
 interface AdminUser {
@@ -73,7 +74,7 @@ export class Admin implements OnInit {
   }
 
   private emptyForm(): AdminReward {
-    return { title: '', description: '', cost: 100, accent: 'peach', icon: '✦', stock: 10 };
+    return { title: '', description: '', cost: 100, accent: 'peach', icon: '✦', stock: 10, enabled: 1 };
   }
 
   protected setTab(t: 'rewards' | 'users' | 'history' | 'settings') {
@@ -240,6 +241,23 @@ export class Admin implements OnInit {
     } catch (e) {
       console.error(e);
       this.notice.set('Save failed');
+    }
+  }
+
+  protected async toggleReward(r: AdminReward) {
+    if (r.id === undefined) return;
+    const next = r.enabled ? 0 : 1;
+    const prev = r.enabled;
+    this.rewards.update((v) => v.map((x) => (x.id === r.id ? { ...x, enabled: next } : x)));
+    try {
+      const updated = await this.http
+        .put<AdminReward>(`${environment.apiUrl}/admin/rewards/${r.id}`, { ...r, enabled: next })
+        .toPromise();
+      if (updated) this.rewards.update((v) => v.map((x) => (x.id === updated.id ? updated : x)));
+      this.notice.set(next ? `"${r.title}" enabled` : `"${r.title}" disabled`);
+    } catch (e) {
+      this.rewards.update((v) => v.map((x) => (x.id === r.id ? { ...x, enabled: prev } : x)));
+      this.notice.set('Toggle failed');
     }
   }
 

@@ -11,6 +11,7 @@ interface Reward {
   readonly accent: string;
   readonly icon: string;
   readonly stock: number;
+  readonly enabled?: number | boolean;
 }
 
 @Component({
@@ -45,7 +46,7 @@ export class Rewards implements OnInit {
     try {
       const data = await this.http.get<Reward[]>(`${environment.apiUrl}/rewards?${bust}`).toPromise();
       if (data) {
-        this.rewards.set(data);
+        this.rewards.set(data.filter((r: any) => r.enabled === undefined || r.enabled === 1 || r.enabled === true));
       }
     } catch (e) {
       console.error('Failed to fetch rewards', e);
@@ -87,6 +88,10 @@ export class Rewards implements OnInit {
   }
 
   protected redeem(reward: Reward): void {
+    if (reward.enabled === 0 || reward.enabled === false) {
+      this.notice.set('รางวัลนี้ปิดให้แลกชั่วคราว');
+      return;
+    }
     if (!this.claimEnabled()) {
       this.notice.set('ตอนนี้ปิดระบบแลกของรางวัลชั่วคราว');
       return;

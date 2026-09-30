@@ -46,10 +46,12 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'BoyAlone99 Backend is running' });
 });
 
-// Get all rewards from Database
+// Get all rewards from Database (admin sees all via same list; frontend filters disabled)
 app.get('/rewards', async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM rewards');
+    // Backfill for DBs created before the enabled column existed
+    await pool.query('ALTER TABLE rewards ADD COLUMN IF NOT EXISTS enabled TINYINT(1) NOT NULL DEFAULT 1').catch(() => {});
+    const [rows] = await pool.query('SELECT *, (enabled <> 0) AS enabled FROM rewards');
     res.json(rows);
   } catch (error) {
     console.error('Database Error:', error);
@@ -186,13 +188,13 @@ app.post('/admin/users/:id/coins', checkAdminAuth, async (req, res) => {
 // Create reward
 app.post('/admin/rewards', checkAdminAuth, async (req, res) => {
   try {
-    const { title, description, cost, accent, icon, stock } = req.body;
+    const { title, description, cost, accent, icon, stock, enabled } = req.body;
     if (!title || cost === undefined) return res.status(400).json({ error: 'title and cost required' });
     const [result] = await pool.query(
-      'INSERT INTO rewards (title, description, cost, accent, icon, stock) VALUES (?, ?, ?, ?, ?, ?)',
-      [title, description || '', Number(cost) || 0, accent || 'peach', icon || '✦', Number(stock) || 0]
+      'INSERT INTO rewards (title, description, cost, accent, icon, stock, enabled) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [title, description || '', Number(cost) || 0, accent || 'peach', icon || '✦', Number(stock) || 0, enabled === false || enabled === 0 || enabled === '0' ? 0 : 1]
     );
-    const [rows] = await pool.query('SELECT * FROM rewards WHERE id = ?', [result.insertId]);
+    const [rows] = await pool.query('SELECT *, (enabled <> 0) AS enabled FROM rewards WHERE id = ?', [result.insertId]);
     res.status(201).json(rows[0]);
   } catch (error) {
     console.error('Database Error:', error);
@@ -204,12 +206,12 @@ app.post('/admin/rewards', checkAdminAuth, async (req, res) => {
 app.put('/admin/rewards/:id', checkAdminAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, cost, accent, icon, stock } = req.body;
+    const { title, description, cost, accent, icon, stock, enabled } = req.body;
     await pool.query(
-      'UPDATE rewards SET title = ?, description = ?, cost = ?, accent = ?, icon = ?, stock = ? WHERE id = ?',
-      [title, description || '', Number(cost) || 0, accent || 'peach', icon || '✦', Number(stock) || 0, id]
+      'UPDATE rewards SET title = ?, description = ?, cost = ?, accent = ?, icon = ?, stock = ?, enabled = ? WHERE id = ?',
+      [title, description || '', Number(cost) || 0, accent || 'peach', icon || '✦', Number(stock) || 0, enabled === false || enabled === 0 || enabled === '0' ? 0 : 1, id]
     );
-    const [rows] = await pool.query('SELECT * FROM rewards WHERE id = ?', [id]);
+    const [rows] = await pool.query('SELECT *, (enabled <> 0) AS enabled FROM rewards WHERE id = ?', [id]);
     if (rows.length === 0) return res.status(404).json({ error: 'Reward not found' });
     res.json(rows[0]);
   } catch (error) {
