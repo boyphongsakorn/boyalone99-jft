@@ -5,6 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 
 interface Reward {
+  readonly id: number;
   readonly title: string;
   readonly description: string;
   readonly cost: number;
