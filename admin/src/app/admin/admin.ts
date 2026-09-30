@@ -34,7 +34,7 @@ interface AdminUser {
   styleUrl: './admin.css',
 })
 export class Admin implements OnInit {
-  protected readonly tab = signal<'rewards' | 'users' | 'history' | 'settings'>('rewards');
+  protected readonly tab = signal<'rewards' | 'users' | 'redemptions' | 'history' | 'settings'>('rewards');
   protected readonly claimEnabled = signal(true);
   protected readonly alertEnabled = signal(false);
   protected alertMessage = '';
@@ -78,7 +78,7 @@ export class Admin implements OnInit {
     return { title: '', description: '', cost: 100, accent: 'peach', icon: '✦', stock: 10, enabled: 1, contact_type: null };
   }
 
-  protected setTab(t: 'rewards' | 'users' | 'history' | 'settings') {
+  protected setTab(t: 'rewards' | 'users' | 'redemptions' | 'history' | 'settings') {
     this.tab.set(t);
   }
 

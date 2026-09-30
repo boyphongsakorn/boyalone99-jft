@@ -20,6 +20,7 @@
     <nav class="tabs" aria-label="Admin sections">
       <button type="button" [class.active]="tab() === 'rewards'" (click)="setTab('rewards')">Rewards</button>
       <button type="button" [class.active]="tab() === 'users'" (click)="setTab('users')">Users ({{ users().length }})</button>
+      <button type="button" [class.active]="tab() === 'redemptions'" (click)="setTab('redemptions')">Redemptions ({{ redemptions().length }})</button>
       <button type="button" [class.active]="tab() === 'history'" (click)="setTab('history')">History</button>
       <button type="button" [class.active]="tab() === 'settings'" (click)="setTab('settings')">Settings</button>
     </nav>
@@ -137,45 +138,53 @@
     </section>
   }
 
+  @if (tab() === 'redemptions') {
+    <section class="card">
+      <h2>Redemptions management ({{ filteredRedemptions().length }})</h2>
+      <p style="font-size: .78rem; color: var(--muted);">Update delivery status or rollback a redemption (refund + restore stock).</p>
+      <div class="coin-form" style="margin-bottom: 12px;">
+        <select [(ngModel)]="redemptionUserFilter" aria-label="Filter redemptions by user">
+          <option value="">All users ({{ redemptions().length }})</option>
+          @for (u of redemptionUsers(); track u.id) {
+            <option [value]="u.id">{{ u.username }} ({{ u.count }})</option>
+          }
+        </select>
+        @if (redemptionUserFilter) {
+          <button type="button" (click)="redemptionUserFilter = ''">Clear</button>
+        }
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>When</th><th>User</th><th>Reward</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            @for (h of filteredRedemptions(); track h.id) {
+              <tr class="process-row">
+                <td>{{ h.redeemed_at }}</td>
+                <td>{{ h.username }}<br /><small>{{ h.user_id }}</small></td>
+                <td>{{ h.reward_title }}<br /><small>{{ h.reward_cost }} AC · #{{ h.id }}</small></td>
+                <td>
+                  <select (change)="updateRedemptionStatus(h.id, $any($event.target).value)" [value]="h.status || 'processing'" style="font-size:.7rem; padding:2px;">
+                    <option value="processing">Processing</option>
+                    <option value="shipped">Shipped</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </td>
+                <td class="actions">
+                  <button type="button" class="danger" (click)="rollbackRedemption(h.id)">Rollback</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="5">No redemptions yet</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+
   @if (tab() === 'history') {
     <section class="panel-grid">
-      <div class="card">
-        <h2>Redemptions ({{ filteredRedemptions().length }})</h2>
-        <div class="coin-form" style="margin-bottom: 12px;">
-          <select [(ngModel)]="redemptionUserFilter" aria-label="Filter redemptions by user">
-            <option value="">All users ({{ redemptions().length }})</option>
-            @for (u of redemptionUsers(); track u.id) {
-              <option [value]="u.id">{{ u.username }} ({{ u.count }})</option>
-            }
-          </select>
-          @if (redemptionUserFilter) {
-            <button type="button" (click)="redemptionUserFilter = ''">Clear</button>
-          }
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>When</th><th>User</th><th>Reward</th><th></th></tr></thead>
-            <tbody>
-              @for (h of filteredRedemptions(); track h.id) {
-                <tr class="process-row">
-                  <td>{{ h.redeemed_at }}</td>
-                  <td>{{ h.username }}<br /><small>{{ h.user_id }}</small></td>
-                  <td>{{ h.reward_title }}<br /><small>{{ h.reward_cost }} AC</small></td>
-                  <td class="actions">
-                    <select (change)="updateRedemptionStatus(h.id, $any($event.target).value)" [value]="h.status || 'processing'" style="font-size:.7rem; padding:2px;">
-                      <option value="processing">Processing</option>
-                      <option value="shipped">Shipped</option>
-                      <option value="delivered">Delivered</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
-                    <button type="button" class="danger" (click)="rollbackRedemption(h.id)">Rollback</button>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </div>
       <div class="card">
         <h2>Coin history ({{ filteredCoinHistory().length }})</h2>
         <div class="coin-form" style="margin-bottom: 12px;">
