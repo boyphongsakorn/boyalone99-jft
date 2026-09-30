@@ -1,0 +1,43 @@
+<main class="rewards-progress">
+  <header class="site-header">
+    <a class="brand" routerLink="/" aria-label="Back to rewards">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span>BoyAlone99 <small>Community</small></span>
+    </a>
+    <div class="header-right">
+      <a class="back-link" routerLink="/rewards">&#8592; Back to Rewards</a>
+    </div>
+  </header>
+
+  <section class="hero">
+    <h1>Reward <em>Progress.</em></h1>
+    <p>Track your requested rewards and their delivery status</p>
+  </section>
+
+  @if (notice(); as msg) {
+    <p class="notice" role="status">{{ msg }}</p>
+  }
+
+  @if (loading()) {
+    <p class="notice" style="text-align:center">Loading your rewards...</p>
+  } @else {
+    @if (processes().length === 0) {
+      <p class="empty">You haven't redeemed any rewards yet. Go get some!</p>
+    } @else {
+      <div class="process-grid">
+        @for (p of processes(); track p.id) {
+          <article class="process-card">
+            <h3>{{ p.reward_title }}</h3>
+            <div class="meta">
+              <span>{{ p.redeemed_at }}</span>
+              <span class="status-pill">{{ p.status || 'Processing' }}</span>
+            </div>
+            <div class="details">
+              <span class="cost">Cost: {{ p.cost }} AC</span>
+            </div>
+          </article>
+        }
+      </div>
+    }
+  }
+</main>
