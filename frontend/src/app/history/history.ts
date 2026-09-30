@@ -15,6 +15,7 @@ interface RedeemRow {
   readonly redeemed_at: string;
   readonly reward_title: string | null;
   readonly cost: number | null;
+  readonly status?: string | null;
 }
 
 @Component({
