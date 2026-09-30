@@ -146,7 +146,37 @@ app.post('/admin/auth/verify', async (req, res) => {
   }
 });
 
-// ---- Admin APIs (Protected) ----
+// User redemption endpoint
+app.post('/redeem', async (req, res) => {
+  try {
+    const { userId, rewardId } = req.body;
+    if (!userId || !rewardId) return res.status(400).json({ error: 'userId and rewardId required' });
+
+    const [reward] = await pool.query('SELECT * FROM rewards WHERE id = ?', [rewardId]);
+    if (reward.length === 0) return res.status(404).json({ error: 'Reward not found' });
+    const r = reward[0];
+
+    if (r.enabled === 0) return res.status(400).json({ error: 'Reward is currently disabled' });
+
+    const [user] = await pool.query('SELECT alone_coin FROM users WHERE id = ?', [userId]);
+    if (user.length === 0) return res.status(404).json({ error: 'User not found' });
+    if (user[0].alone_coin < r.cost) return res.status(400).json({ error: 'Insufficient Alone Coin' });
+
+    await pool.query('UPDATE users SET alone_coin = alone_coin - ? WHERE id = ?', [r.cost, userId]);
+    const [result] = await pool.query(
+      'INSERT INTO redemption_history (user_id, reward_id, status) VALUES (?, ?, ?)',
+      [userId, rewardId, 'processing']
+    );
+    await pool.query('INSERT INTO coin_history (user_id, amount, reason) VALUES (?, ?, ?)', [
+      userId, -r.cost, `redeem: ${r.title}`
+    ]);
+
+    res.json({ success: true, redemptionId: result.insertId, balance: user[0].alone_coin - r.cost });
+  } catch (error) {
+    console.error('Redemption Error:', error);
+    res.status(500).json({ error: 'Failed to redeem reward' });
+  }
+});
 
 // List all users
 app.get('/admin/users', checkAdminAuth, async (req, res) => {
@@ -232,8 +262,37 @@ app.delete('/admin/rewards/:id', checkAdminAuth, async (req, res) => {
   }
 });
 
-// Redemption history
-app.get('/admin/redemptions', checkAdminAuth, async (req, res) => {
+// List redemptions with status for user progress
+app.get('/users/:userId/redemptions', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const [rows] = await pool.query(
+      `SELECT h.id, h.reward_id, h.redeemed_at, h.status, r.title AS reward_title, r.cost
+       FROM redemption_history h
+       LEFT JOIN rewards r ON r.id = h.reward_id
+       WHERE h.user_id = ? ORDER BY h.redeemed_at DESC LIMIT 100`,
+      [userId]
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to fetch redemptions' });
+  }
+});
+
+// Admin: update redemption status
+app.put('/admin/redemptions/:id/status', checkAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    if (!status) return res.status(400).json({ error: 'status required' });
+    await pool.query('UPDATE redemption_history SET status = ? WHERE id = ?', [status, id]);
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to update status' });
+  }
+});
   try {
     const [rows] = await pool.query(
       `SELECT h.id, h.reward_id, h.redeemed_at, u.username, u.id AS user_id, r.title AS reward_title, r.cost AS reward_cost

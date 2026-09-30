@@ -150,7 +150,20 @@
             <thead><tr><th>When</th><th>User</th><th>Reward</th><th></th></tr></thead>
             <tbody>
               @for (h of filteredRedemptions(); track h.id) {
-                <tr><td>{{ h.redeemed_at }}</td><td>{{ h.username }}<br /><small>{{ h.user_id }}</small></td><td>{{ h.reward_title }}<br /><small>{{ h.reward_cost }} AC</small></td><td class="actions"><button type="button" class="danger" (click)="rollbackRedemption(h.id)">Rollback</button></td></tr>
+                <tr class="process-row">
+                  <td>{{ h.redeemed_at }}</td>
+                  <td>{{ h.username }}<br /><small>{{ h.user_id }}</small></td>
+                  <td>{{ h.reward_title }}<br /><small>{{ h.reward_cost }} AC</small></td>
+                  <td class="actions">
+                    <select (change)="updateRedemptionStatus(h.id, $any($event.target).value)" [value]="h.status || 'processing'" style="font-size:.7rem; padding:2px;">
+                      <option value="processing">Processing</option>
+                      <option value="shipped">Shipped</option>
+                      <option value="delivered">Delivered</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                    <button type="button" class="danger" (click)="rollbackRedemption(h.id)">Rollback</button>
+                  </td>
+                </tr>
               }
             </tbody>
           </table>

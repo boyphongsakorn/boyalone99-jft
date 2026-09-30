@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS redemption_history (
     user_id VARCHAR(255) NOT NULL,
     reward_id INT NOT NULL,
     redeemed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(50) DEFAULT 'processing',
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (reward_id) REFERENCES rewards(id)
 );

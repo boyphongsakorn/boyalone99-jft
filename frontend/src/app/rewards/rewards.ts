@@ -87,7 +87,7 @@ export class Rewards implements OnInit {
     return this.claimEnabled() && this.isLoggedIn() && this.balance() >= cost;
   }
 
-  protected redeem(reward: Reward): void {
+  protected async redeem(reward: Reward): Promise<void> {
     if (reward.enabled === 0 || reward.enabled === false) {
       this.notice.set('รางวัลนี้ปิดให้แลกชั่วคราว');
       return;
@@ -105,8 +105,18 @@ export class Rewards implements OnInit {
       return;
     }
 
-    this.balance.update((current) => current - reward.cost);
-    this.notice.set(`แลกรางวัล ${reward.title} สำเร็จแล้ว`);
+    try {
+      const user = JSON.parse(localStorage.getItem('user_profile') || '{}');
+      const res: any = await this.http.post(`${environment.apiUrl}/redeem`, {
+        userId: user.id,
+        rewardId: reward.id
+      }).toPromise();
+
+      this.balance.set(res.balance);
+      this.notice.set(`แลกรางวัล ${reward.title} สำเร็จแล้ว! กำลังดำเนินการจัดส่ง`);
+    } catch (e: any) {
+      this.notice.set(e?.error?.error || 'การแลกรางวัลล้มเหลว');
+    }
   }
 
   protected logout(): void {

@@ -397,6 +397,16 @@ export class Admin implements OnInit {
     }
   }
 
+  protected async updateRedemptionStatus(id: number, status: string) {
+    try {
+      await this.http.put(`${environment.apiUrl}/admin/redemptions/${id}/status`, { status }).toPromise();
+      this.notice.set(`Redemption #${id} updated to ${status}`);
+      await this.refreshHistory();
+    } catch (e: any) {
+      this.notice.set(e?.error?.error || 'Status update failed');
+    }
+  }
+
   protected async rollbackRedemption(id: number) {
     if (typeof window !== 'undefined' && !window.confirm(`Rollback redemption #${id}? Cost will be refunded.`)) return;
     try {
