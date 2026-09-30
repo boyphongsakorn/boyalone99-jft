@@ -24,35 +24,41 @@
         <p class="notice" role="status">{{ msg }}</p>
       }
 
-      <h2>Alone Coin <small>ได้ / ใช้</small></h2>
-      @if (coins().length === 0) {
-        <p class="empty">ยังไม่มีประวัติเหรียญ</p>
-      } @else {
-        <ul class="history-list">
-          @for (c of coins(); track c.id) {
-            <li class="history-row" [class.spend]="c.amount < 0">
-              <span class="amount">{{ c.amount > 0 ? '+' : '' }}{{ c.amount }} AC</span>
-              <span class="reason">{{ c.reason || '—' }}</span>
-              <small>{{ c.created_at }}</small>
-            </li>
+      <div class="history-grid">
+        <div class="history-col">
+          <h2>Alone Coin <small>ได้ / ใช้</small></h2>
+          @if (coins().length === 0) {
+            <p class="empty">ยังไม่มีประวัติเหรียญ</p>
+          } @else {
+            <ul class="history-list">
+              @for (c of coins(); track c.id) {
+                <li class="history-row" [class.spend]="c.amount < 0">
+                  <span class="amount">{{ c.amount > 0 ? '+' : '' }}{{ c.amount }} AC</span>
+                  <span class="reason">{{ c.reason || '—' }}</span>
+                  <small>{{ c.created_at }}</small>
+                </li>
+              }
+            </ul>
           }
-        </ul>
-      }
+        </div>
 
-      <h2>Redeemed rewards <small>ของที่แลกแล้ว</small></h2>
-      @if (redeems().length === 0) {
-        <p class="empty">ยังไม่เคยแลกของรางวัล</p>
-      } @else {
-        <ul class="history-list">
-          @for (r of redeems(); track r.id) {
-            <li class="history-row">
-              <span class="amount">−{{ r.cost ?? '?' }} AC</span>
-              <span class="reason">{{ r.reward_title || 'Reward' }} <small class="status">({{ r.status || 'processing' }})</small></span>
-              <small>{{ r.redeemed_at }}</small>
-            </li>
+        <div class="history-col">
+          <h2>Redeemed rewards <small>ของที่แลกแล้ว</small></h2>
+          @if (redeems().length === 0) {
+            <p class="empty">ยังไม่เคยแลกของรางวัล</p>
+          } @else {
+            <ul class="history-list">
+              @for (r of redeems(); track r.id) {
+                <li class="history-row">
+                  <span class="amount">−{{ r.cost ?? '?' }} AC</span>
+                  <span class="reason">{{ r.reward_title || 'Reward' }} <small class="status">({{ r.status || 'processing' }})</small></span>
+                  <small>{{ r.redeemed_at }}</small>
+                </li>
+              }
+            </ul>
           }
-        </ul>
-      }
+        </div>
+      </div>
     }
   </section>
 </main>
