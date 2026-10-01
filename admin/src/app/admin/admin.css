@@ -37,7 +37,12 @@ h1 em { color: var(--coral); font-style: normal; }
 .tabs button { background: #fff; border: 2px solid var(--ink); border-radius: 20px; cursor: pointer; font: inherit; font-size: .8rem; padding: 6px 16px; }
 .tabs button.active { background: var(--ink); color: var(--paper); }
 .notice { background: #fff6d9; border: 1px dashed #b28d31; color: #756023; font-size: .82rem; margin: 0 auto 16px; max-width: 1180px; padding: 10px 14px; }
-.panel-grid { display: grid; gap: 16px; grid-template-columns: 380px 1fr; margin: 0 auto; max-width: 1180px; align-items: start; }
+.panel-grid { display: grid; gap: 16px; grid-template-columns: minmax(0, 380px) minmax(0, 1fr); margin: 0 auto; max-width: 1180px; align-items: start; }
+.panel-grid .card { min-width: 0; overflow: hidden; }
+.panel-grid table { table-layout: fixed; }
+.panel-grid td { overflow-wrap: anywhere; }
+.panel-grid .coin-form select { max-width: 100%; min-width: 0; }
+td.actions { white-space: normal; }
 @media (max-width: 900px) { .panel-grid { grid-template-columns: 1fr; } }
 .card { background: rgba(255,255,255,.6); border: 2px solid var(--ink); border-radius: 4px 12px 6px 10px; box-shadow: 5px 5px 0 var(--ink); margin: 0 auto 16px; max-width: 1180px; padding: 20px; }
 .panel-grid .card { margin: 0; }
