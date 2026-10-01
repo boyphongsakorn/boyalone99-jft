@@ -30,6 +30,7 @@
             @if (!isLoggedIn()) {
               <a class="claim-btn" routerLink="/login">ล็อกอินเพื่อรับ</a>
             } @else {
+              <a class="claim-btn" [href]="twitchChatUrl()" target="_blank" rel="noopener">💬 เปิด Twitch Chat</a>
               <button type="button" class="claim-btn primary" (click)="claimChannelPoints()" [disabled]="!channelRedeemable() || checking()">
                 {{ channelPending() > 0 ? 'รับ AC (มี ' + channelPending() + ' รางวัลรอรับ)' : 'รับ AC (Channel Points)' }}
               </button>
@@ -38,7 +39,7 @@
           @if (!twitchLinked() && isLoggedIn()) {
             <p class="claim-hint">ยังไม่ได้เชื่อม Twitch — ไปที่ <a routerLink="/profile">โปรไฟล์ → Link Twitch</a> ก่อน แล้วกดรับอีกครั้ง</p>
           } @else if (isLoggedIn() && !channelRedeemable()) {
-            <p class="claim-hint">ยังไม่พบรางวัลที่แลกไว้ — ไปแลก Channel Points reward บน Twitch ก่อน แล้วกดรับอีกครั้ง</p>
+            <p class="claim-hint">ยังไม่พบรางวัลที่แลกไว้ — ไปแลก Channel Points reward บน Twitch ก่อน แล้วกดรับอีกครั้ง (โดยปกติแล้ว Coin จะเข้าอัตโนมัติ หลังจากที่คุณแลกแล้วใน Twitch Chat)</p>
           }
         </div>
         <strong>1000 pts = 100 AC</strong>

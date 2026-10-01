@@ -15,6 +15,7 @@ export class AloneCoin implements OnInit {
   protected readonly twitchFollowing = signal<boolean | null>(null);
   protected readonly twitchLinked = signal(true);
   protected readonly twitchUrl = signal('https://www.twitch.tv/boyalone99');
+  protected readonly twitchChatUrl = signal('https://www.twitch.tv/popout/boyalone99/chat?popout=');
   protected readonly youtubeUrl = signal('https://youtube.com/@BoyAlone99Gaming?sub_confirmation=1');
   protected readonly twitchClaimed = signal(false);
   protected readonly youtubeClaimed = signal(false);
