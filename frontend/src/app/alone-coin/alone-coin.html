@@ -39,7 +39,7 @@
         <span class="step-icon" aria-hidden="true">✦</span>
         <div>
           <h3>แต้มช่อง Twitch</h3>
-          <p>แลกแต้มช่องที่สะสมมาเป็นเหรียญชุมชน</p>
+          <p>แลกแต้มช่องที่สะสมมาเป็น Alone Coin</p>
           <div class="claim-row">
             @if (!isLoggedIn()) {
               <a class="claim-btn" routerLink="/login">ล็อกอินเพื่อรับ</a>
@@ -158,8 +158,10 @@
   }
 
   <aside class="guide-note">
-    <span aria-hidden="true">◎</span>
-    <p>ต้องล็อกอินก่อนจึงจะสะสมเหรียญหรือแลกของรางวัลได้</p>
+    @if (!isLoggedIn()) {
+      <span aria-hidden="true">◎</span>
+      <p>ต้องล็อกอินก่อนจึงจะสะสมเหรียญหรือแลกของรางวัลได้</p>
+    }
   </aside>
 
   <footer class="guide-footer">
