@@ -29,18 +29,23 @@ export class AlertBar implements OnInit {
 
   async ngOnInit() {
     if (typeof window === 'undefined') return;
-    if (sessionStorage.getItem('alert_dismissed')) return;
     try {
       const s = await this.http.get<{ alert_enabled: boolean; alert_message: string }>(`${environment.apiUrl}/settings?t=${Date.now()}`).toPromise();
       if (s?.alert_enabled && s.alert_message) {
-        this.message.set(s.alert_message);
-        this.visible.set(true);
+        // Only auto-show if this exact message hasn't been dismissed yet.
+        // A changed message or a re-enabled alert gets a fresh key, so it shows again.
+        const key = `alert_dismissed:${s.alert_message}`;
+        if (!sessionStorage.getItem(key)) {
+          this.message.set(s.alert_message);
+          this.visible.set(true);
+        }
       }
     } catch { /* no alert */ }
   }
 
   protected dismiss(): void {
     this.visible.set(false);
-    try { sessionStorage.setItem('alert_dismissed', '1'); } catch { /* ignore */ }
+    // Remember the dismissed message text — new/changed messages use a new key and show again
+    try { sessionStorage.setItem(`alert_dismissed:${this.message()}`, '1'); } catch { /* ignore */ }
   }
 }
