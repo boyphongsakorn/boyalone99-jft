@@ -1,10 +1,11 @@
 import { Component, OnInit, signal } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 
 @Component({
-  imports: [RouterLink],
+  imports: [RouterLink, DecimalPipe],
   selector: 'app-alone-coin',
   styleUrl: './alone-coin.css',
   templateUrl: './alone-coin.html',
@@ -33,6 +34,7 @@ export class AloneCoin implements OnInit {
   protected readonly subTenureAuto = signal(false);
   protected readonly channelPending = signal(0);
   protected readonly channelRedeemable = signal(false);
+  protected readonly balance = signal<number | null>(null);
   protected readonly notice = signal<string | null>(null);
   protected readonly checking = signal(false);
 
@@ -93,6 +95,10 @@ export class AloneCoin implements OnInit {
         this.channelRedeemable.set(cp.redeemable === true);
         this.channelPending.set(cp.pending ?? 0);
       }
+      try {
+        const bal: any = await this.http.get(`${environment.apiUrl}/balance/${encodeURIComponent(id)}`).toPromise();
+        if (typeof bal?.balance === 'number') this.balance.set(bal.balance);
+      } catch { /* balance optional */ }
       if (sub) {
         if (sub.subscribeUrl) this.subUrl.set(sub.subscribeUrl);
         if (sub.reason === 'twitch_not_linked') this.hasSub.set(false);
@@ -120,6 +126,7 @@ export class AloneCoin implements OnInit {
     try {
       const res: any = await this.http.post(`${environment.apiUrl}/claim/channel-points`, { userId: id }).toPromise();
       this.notice.set(`รับ +${res.granted} AC สำเร็จ! ยอดคงเหลือ ${res.balance} AC`);
+      if (typeof res?.balance === 'number') this.balance.set(res.balance);
       this.channelRedeemable.set(false);
       this.channelPending.set(0);
     } catch (e: any) {
@@ -140,6 +147,7 @@ export class AloneCoin implements OnInit {
         .toPromise();
       const amounts: Record<string, number> = { twitch: 100, youtube: 100, booster: 150, lfg: 100, twitchsub: res.granted ?? 200 };
       this.notice.set(`รับ +${res.granted ?? (platform === 'twitchsub' ? 200 : amounts[platform])} AC สำเร็จ! ยอดคงเหลือ ${res.balance} AC`);
+      if (typeof res?.balance === 'number') this.balance.set(res.balance);
       if (platform === 'twitch') this.twitchClaimed.set(true);
       else if (platform === 'youtube') this.youtubeClaimed.set(true);
       else if (platform === 'booster') this.boosterClaimed.set(true);

@@ -11,11 +11,17 @@
 .brand-mark i:nth-child(2) { background: #e0b44f; height: 78%; margin-top: auto; }
 .brand-mark i:nth-child(3) { background: var(--teal); height: 54%; margin-top: auto; }
 .back-link, .guide-footer a { color: var(--ink); font-size: .72rem; text-decoration-color: #e0b44f; text-underline-offset: 4px; }
-.guide-intro { padding: 100px 8% 76px; }
+.guide-intro { padding: 44px 4% 30px; }
+.intro-row { align-items: center; display: flex; gap: 24px; justify-content: space-between; }
+.coin-balance { align-items: center; background: #e4eee9; border: 2px solid var(--ink); border-radius: 4px 9px 5px 8px; box-shadow: 4px 4px 0 var(--ink); display: flex; flex: 0 0 auto; gap: 10px; padding: 10px 14px; transform: rotate(2deg); }
+.coin-symbol { align-items: center; background: #e0b44f; border: 2px solid var(--ink); border-radius: 50%; display: flex; flex: 0 0 34px; font-size: 1rem; font-weight: 700; height: 34px; justify-content: center; width: 34px; }
+.balance-copy { display: grid; }
+.balance-label, .balance-name { color: var(--muted); font-size: .65rem; }
+.coin-balance strong { font-size: 1.5rem; letter-spacing: -.04em; line-height: 1; margin: 1px 0; }
 .eyebrow { color: var(--teal); font-size: .75rem; font-weight: 700; margin: 0 0 18px; transform: rotate(-2deg); }
-h1 { font-size: clamp(3rem, 7vw, 6rem); letter-spacing: -.09em; line-height: .87; margin: 0; transform: rotate(-2deg); }
+h1 { font-size: clamp(1.8rem, 3.5vw, 2.8rem); letter-spacing: -.05em; line-height: 1; margin: 0; transform: rotate(-1deg); }
 h1 em { color: var(--coral); font-style: normal; }
-.guide-intro > p:last-child { color: var(--muted); font-size: .92rem; line-height: 1.75; margin: 30px 0 0; max-width: 560px; }
+.guide-intro p:last-child { color: var(--muted); font-size: .82rem; line-height: 1.6; margin: 12px 0 0; max-width: 560px; }
 .steps { border-top: 2px solid var(--ink); padding-top: 18px; }
 .section-heading { align-items: baseline; display: flex; justify-content: space-between; }
 .section-heading h2 { font-size: 1.35rem; margin: 0; }
@@ -42,4 +48,4 @@ h1 em { color: var(--coral); font-style: normal; }
 .guide-note span { font-size: 1.3rem; }
 .guide-note p { margin: 0; }
 .guide-footer { border-top: 1px solid var(--line); color: var(--muted); display: flex; font-size: .66rem; justify-content: space-between; margin-top: 62px; padding-top: 14px; }
-@media (max-width: 600px) { .coin-guide { padding-inline: 20px; } .back-link { font-size: 0; } .back-link::after { content: 'Back'; font-size: .72rem; } .guide-intro { padding: 78px 0 58px; } h1 { font-size: clamp(3rem, 16vw, 5rem); } .step-card { align-items: start; grid-template-columns: 30px 44px 1fr; padding: 14px; } .step-card strong { grid-column: 3; } .guide-footer { flex-direction: column; gap: 8px; margin-top: 44px; } }
+@media (max-width: 600px) { .coin-guide { padding-inline: 20px; } .back-link { font-size: 0; } .back-link::after { content: 'Back'; font-size: .72rem; } .guide-intro { padding: 30px 0 24px; } .intro-row { align-items: start; flex-direction: column; } .coin-balance { align-self: end; } h1 { font-size: clamp(1.8rem, 9vw, 2.6rem); } .step-card { align-items: start; grid-template-columns: 30px 44px 1fr; padding: 14px; } .step-card strong { grid-column: 3; } .guide-footer { flex-direction: column; gap: 8px; margin-top: 44px; } }

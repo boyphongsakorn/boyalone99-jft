@@ -8,9 +8,23 @@
   </header>
 
   <section class="guide-intro" aria-labelledby="guide-title">
-    <p class="eyebrow">คู่มือเล็ก ๆ</p>
-    <h1 id="guide-title">วิธีรับ<br /><em>Alone Coin.</em></h1>
-    <p>Alone Coin คือวิธีเล็ก ๆ ของเราที่จะขอบคุณที่มาร่วมกัน อยู่ด้วยกัน และทำให้ชุมชนนี้รู้สึกเหมือนบ้าน</p>
+    <div class="intro-row">
+      <div>
+        <p class="eyebrow">คู่มือเล็ก ๆ</p>
+        <h1 id="guide-title">วิธีรับ <em>Alone Coin.</em></h1>
+        <p>Alone Coin คือวิธีเล็ก ๆ ของเราที่จะขอบคุณที่มาร่วมกัน อยู่ด้วยกัน และทำให้ชุมชนนี้รู้สึกเหมือนบ้าน</p>
+      </div>
+      @if (isLoggedIn() && balance() !== null) {
+        <div class="coin-balance" aria-label="Your Alone Coin balance">
+          <span class="coin-symbol" aria-hidden="true">A</span>
+          <span class="balance-copy">
+            <span class="balance-label">You have</span>
+            <strong>{{ balance()! | number }}</strong>
+            <span class="balance-name">Alone Coin</span>
+          </span>
+        </div>
+      }
+    </div>
   </section>
 
   <section class="steps" aria-labelledby="steps-title">
