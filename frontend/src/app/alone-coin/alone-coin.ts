@@ -138,8 +138,7 @@ export class AloneCoin implements OnInit {
         .post(`${environment.apiUrl}/claim/follow`, body)
         .toPromise();
       const amounts: Record<string, number> = { twitch: 100, youtube: 100, booster: 150, lfg: 100, twitchsub: res.granted ?? 200 };
-      this.notice.set(res.monthsClaimed ? `รับ +${res.granted} AC (ซับเดือนที่ ${res.monthsClaimed}) สำเร็จ! ยอดคงเหลือ ${res.balance} AC` : `รับ +${amounts[platform]} AC สำเร็จ! ยอดคงเหลือ ${res.balance} AC`);
-      if (typeof res?.monthsClaimed === 'number') this.subMonths.set(res.monthsClaimed);
+      this.notice.set(`รับ +${res.granted ?? (platform === 'twitchsub' ? 200 : amounts[platform])} AC สำเร็จ! ยอดคงเหลือ ${res.balance} AC`);
       if (platform === 'twitch') this.twitchClaimed.set(true);
       else if (platform === 'youtube') this.youtubeClaimed.set(true);
       else if (platform === 'booster') this.boosterClaimed.set(true);

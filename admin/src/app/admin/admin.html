@@ -110,7 +110,7 @@
       <h2>All users ({{ users().length }})</h2>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>User</th><th>Email</th><th>Alone Coin</th><th>Add coin</th><th>Sub tenure</th></tr></thead>
+          <thead><tr><th>User</th><th>Email</th><th>Alone Coin</th><th>Add coin</th><th>Sub reward</th></tr></thead>
           <tbody>
             @for (u of users(); track u.id) {
               <tr>
@@ -126,8 +126,7 @@
                 </td>
                 <td>
                   <div class="coin-form">
-                    <input type="number" [(ngModel)]="seedMonths[u.id]" placeholder="months" min="1" max="120" style="max-width: 5rem;" />
-                    <button type="button" (click)="seedSubTenure(u)">Seed</button>
+                    -
                   </div>
                 </td>
               </tr>
