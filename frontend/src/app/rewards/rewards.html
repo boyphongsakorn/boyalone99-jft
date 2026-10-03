@@ -20,16 +20,16 @@
 
   <section class="hero" aria-labelledby="rewards-title">
     <div>
-      <p class="eyebrow">ของรางวัลสำหรับชุมชน</p>
-      <h1 id="rewards-title">Spend your <em>Alone Coin.</em></h1>
-      <p class="hero-copy">เหรียญเล็ก ๆ จากการอยู่ด้วยกัน ใช้แลกของรางวัลที่ทำมาเพื่อชุมชนของเรา</p>
-      <a class="coin-guide-link" routerLink="/alone-coin">How to get Alone Coin <span aria-hidden="true">&#8599;</span></a>
+      <p class="eyebrow">ของรางวัลแทนคำขอบคุณ</p>
+      <h1 id="rewards-title">BoyAlone99 <em>"Alone Coin"</em></h1>
+      <p class="hero-copy">Alone Coin เหรียญเล็ก ๆ ได้จากการติดตาม,ดู หรือ สนับสนุน ใช้เป็นเหรียญแลกของรางวัลขอบคุณที่ติดตามกัน</p>
+      <a class="coin-guide-link" routerLink="/alone-coin">วิธีการรับ Alone Coin <span aria-hidden="true">&#8599;</span></a>
     </div>
     @if (isLoggedIn()) {
       <div class="coin-balance" aria-label="Your Alone Coin balance">
       <span class="coin-symbol" aria-hidden="true">A</span>
       <span class="balance-copy">
-        <span class="balance-label">You have</span>
+        <span class="balance-label">คุณ</span>
         <strong>{{ balance() | number }}</strong>
         <span class="balance-name">Alone Coin</span>
       </span>
@@ -37,7 +37,7 @@
       </div>
     } @else {
       <a class="login-prompt" routerLink="/login">
-        <span>Sign in to see your<br /><strong>Alone Coin</strong></span>
+        <span>ล็อกอินเพื่อเช็ค<br /><strong>Alone Coin</strong><br />ของคุณ</span>
         <span aria-hidden="true">↗</span>
       </a>
     }
@@ -49,8 +49,8 @@
 
   <section class="reward-section" aria-labelledby="available-title">
     <div class="section-heading">
-      <h2 id="available-title">Available rewards</h2>
-      <span>pick a little something</span>
+      <h2 id="available-title">ของรางวัลที่มี</h2>
+      <!-- <span>pick a little something</span> -->
     </div>
 
     <div class="reward-grid">
