@@ -37,6 +37,7 @@ const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || crypto.randomBytes(32).
     }
   };
   await backfill("ALTER TABLE rewards ADD COLUMN contact_type VARCHAR(50) NULL");
+  await backfill("ALTER TABLE users ADD COLUMN warframe_ign VARCHAR(255) NULL");
 })();
 
 // Middleware to check Admin Auth
@@ -574,13 +575,16 @@ app.get('/users/:id/redemptions', async (req, res) => {
   }
 });
 
-// Get user profile (email + epic username from DB)
+// Get user profile (email + epic username + warframe IGN from DB)
 // GET /users/:id
 app.get('/users/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    await pool.query("ALTER TABLE users ADD COLUMN warframe_ign VARCHAR(255) NULL").catch((e) => {
+      if (e.code !== 'ER_DUP_FIELDNAME') throw e;
+    });
     const [rows] = await pool.query(
-      'SELECT id, username, email, avatar, alone_coin, epic_username, twitch_id, twitch_username FROM users WHERE id = ?',
+      'SELECT id, username, email, avatar, alone_coin, epic_username, warframe_ign, twitch_id, twitch_username FROM users WHERE id = ?',
       [id]
     );
     if (rows.length === 0) return res.status(404).json({ error: 'User not found' });
@@ -591,19 +595,23 @@ app.get('/users/:id', async (req, res) => {
   }
 });
 
-// Update user profile (email + epic username saved to DB)
-// PUT /users/:id { email, epic_username }
+// Update user profile (email + epic username + warframe IGN saved to DB)
+// PUT /users/:id { email, epic_username, warframe_ign }
 app.put('/users/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { email, epic_username } = req.body;
-    await pool.query('UPDATE users SET email = ?, epic_username = ? WHERE id = ?', [
+    const { email, epic_username, warframe_ign } = req.body;
+    await pool.query("ALTER TABLE users ADD COLUMN warframe_ign VARCHAR(255) NULL").catch((e) => {
+      if (e.code !== 'ER_DUP_FIELDNAME') throw e;
+    });
+    await pool.query('UPDATE users SET email = ?, epic_username = ?, warframe_ign = ? WHERE id = ?', [
       email || null,
       epic_username || null,
+      warframe_ign || null,
       id,
     ]);
     const [rows] = await pool.query(
-      'SELECT id, username, email, avatar, alone_coin, epic_username, twitch_id, twitch_username FROM users WHERE id = ?',
+      'SELECT id, username, email, avatar, alone_coin, epic_username, warframe_ign, twitch_id, twitch_username FROM users WHERE id = ?',
       [id]
     );
     if (rows.length === 0) return res.status(404).json({ error: 'User not found' });

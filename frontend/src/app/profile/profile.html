@@ -7,9 +7,9 @@
       <span>BoyAlone99 <small>Community</small></span>
     </a>
     <div class="header-right">
-      <a class="back-link" routerLink="/history">History</a>
-      <a class="back-link" routerLink="/">&#8592; Rewards</a>
-      <button type="button" class="logout-btn" (click)="logout()">Logout</button>
+      <a class="back-link" routerLink="/history">ประวัติ</a>
+      <a class="back-link" routerLink="/">&#8592; ของรางวัล</a>
+      <button type="button" class="logout-btn" (click)="logout()">ออกจากระบบ</button>
     </div>
   </header>
 
@@ -19,8 +19,8 @@
         <img [src]="userAvatar()" alt="Profile Avatar">
       </div>
       <div>
-        <h1 id="profile-title">My Profile</h1>
-        <p class="subtitle">Manage your identity in the community</p>
+        <h1 id="profile-title">โปรไฟล์ของฉัน</h1>
+        <p class="subtitle">จัดการโปรไฟล์ของคุณ</p>
       </div>
     </header>
 
@@ -39,7 +39,7 @@
       </div>
 
       <div class="setting-row">
-        <label for="epic">Epic Username</label>
+        <label for="epic">ชื่อผู้ใช้ Epic (ชื่อในเกม Fortnite)</label>
         <div class="input-wrapper">
           <input 
             id="epic" 
@@ -47,6 +47,19 @@
             [(ngModel)]="epicUsername" 
             [disabled]="!isEditing()"
             placeholder="EpicUsername"
+          />
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <label for="warframe">Warframe IGN (ชื่อในเกม Warframe)</label>
+        <div class="input-wrapper">
+          <input 
+            id="warframe" 
+            type="text" 
+            [(ngModel)]="warframeIgn" 
+            [disabled]="!isEditing()"
+            placeholder="WarframeIGN"
           />
         </div>
       </div>
@@ -60,12 +73,12 @@
       >
         @if (isEditing()) {
           @if (saveStatus() === 'saving') {
-            Saving...
+            กำลังบันทึก...
           } @else {
-            Save Changes
+            บันทึกการเปลี่ยนแปลง
           }
         } @else {
-          Edit Profile
+          แก้ไขโปรไฟล์
         }
       </button>
       
@@ -75,8 +88,8 @@
     </div>
 
     <div class="social-section">
-      <h2>Linked accounts</h2>
-      <p class="social-hint">Link another social to your main account</p>
+      <h2>ลิงก์บัญชี</h2>
+      <p class="social-hint">ลิงก์บัญชีเพิ่มเติม</p>
       <div class="social-grid">
         <div class="social-row discord">
           <span class="social-icon" aria-hidden="true">◈</span>
@@ -89,7 +102,7 @@
             }
           </span>
           @if (!linkedDiscord()) {
-            <button type="button" (click)="linkSocial('Discord')">Link</button>
+            <button type="button" (click)="linkSocial('Discord')">เชื่อมต่อ</button>
           }
         </div>
         <div class="social-row twitch">
@@ -103,9 +116,9 @@
             }
           </span>
           @if (linkedTwitch()) {
-            <button type="button" class="unlink" (click)="unlinkSocial('twitch')">Unlink</button>
+            <button type="button" class="unlink" (click)="unlinkSocial('twitch')">ยกเลิกการเชื่อมต่อ</button>
           } @else {
-            <button type="button" (click)="linkSocial('Twitch')">Link</button>
+            <button type="button" (click)="linkSocial('Twitch')">เชื่อมต่อ</button>
           }
         </div>
         <div class="social-row youtube">
@@ -119,9 +132,9 @@
             }
           </span>
           @if (linkedYoutube()) {
-            <button type="button" class="unlink" (click)="unlinkSocial('youtube')">Unlink</button>
+            <button type="button" class="unlink" (click)="unlinkSocial('youtube')">ยกเลิกการเชื่อมต่อ</button>
           } @else {
-            <button type="button" (click)="linkSocial('YouTube')">Link</button>
+            <button type="button" (click)="linkSocial('YouTube')">เชื่อมต่อ</button>
           }
         </div>
       </div>

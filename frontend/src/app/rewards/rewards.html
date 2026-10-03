@@ -8,13 +8,13 @@
     </a>
     <div class="header-right">
       @if (isLoggedIn()) {
-        <a class="profile-link" routerLink="/history">History</a>
-        <a class="profile-link" routerLink="/profile">My Profile</a>
-        <button type="button" class="logout-btn" (click)="logout()">Logout</button>
+        <a class="profile-link" routerLink="/history">ประวัติ</a>
+        <a class="profile-link" routerLink="/profile">โปรไฟล์ของฉัน</a>
+        <button type="button" class="logout-btn" (click)="logout()">ออกจากระบบ</button>
       } @else {
         <a class="login-link" routerLink="/login">Login</a>
       }
-      <span class="header-note">reward shelf / 01</span>
+      <span class="header-note">ตู้ของรางวัล / 01</span>
     </div>
   </header>
 

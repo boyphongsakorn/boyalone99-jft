@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
     avatar VARCHAR(255),
     alone_coin INT DEFAULT 0,
     epic_username VARCHAR(255) NULL,
+    warframe_ign VARCHAR(255) NULL,
     twitch_id VARCHAR(255) NULL,
     twitch_username VARCHAR(255) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

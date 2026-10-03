@@ -14,6 +14,7 @@ import { environment } from '../../environments/environment';
 export class Profile implements OnInit {
   protected email = signal('');
   protected epicUsername = signal('');
+  protected warframeIgn = signal('');
   protected userAvatar = signal('https://cdn.discordapp.com/embed/avatars/0.png');
   protected isEditing = signal(false);
   protected saveStatus = signal<'idle' | 'saving' | 'saved'>('idle');
@@ -69,6 +70,7 @@ export class Profile implements OnInit {
         if (profile) {
           this.email.set(profile.email || '');
           this.epicUsername.set(profile.epic_username || '');
+          this.warframeIgn.set(profile.warframe_ign || '');
           // DB is source of truth for links — show linked even if localStorage missed it
           if (profile.twitch_id || profile.twitch_username) {
             this.linkedTwitch.set(profile.twitch_username || 'Linked');
@@ -157,10 +159,12 @@ export class Profile implements OnInit {
       const updated: any = await this.http.put(`${environment.apiUrl}/users/${encodeURIComponent(userId)}`, {
         email: this.email(),
         epic_username: this.epicUsername(),
+        warframe_ign: this.warframeIgn(),
       }).toPromise();
       if (updated) {
         this.email.set(updated.email || '');
         this.epicUsername.set(updated.epic_username || '');
+        this.warframeIgn.set(updated.warframe_ign || '');
       }
       this.saveStatus.set('saved');
       this.isEditing.set(false);
