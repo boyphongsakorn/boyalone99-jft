@@ -75,14 +75,19 @@
               @if (missingWarframe(reward)) {
                 <span class="warning-badge epic">⚠ ต้องการ Warframe IGN (ชื่อในเกม)</span>
               }
+              @if (reward.one_per_user === 1 || reward.one_per_user === true) {
+                <span class="warning-badge epic">1 ครั้งต่อคน</span>
+              }
             </div>
             <span class="stock-count">เหลือ {{ reward.stock }}</span>
           </div>
           <div class="reward-action">
             <span class="cost"><b>{{ reward.cost | number }}</b> AC</span>
-            <button type="button" [disabled]="!claimEnabled() || (reward.claimable === 0 || reward.claimable === false) || !isLoggedIn() || reward.stock <= 0" (click)="redeem(reward)">
+            <button type="button" [disabled]="!claimEnabled() || (reward.claimable === 0 || reward.claimable === false) || alreadyClaimed(reward) || !isLoggedIn() || reward.stock <= 0" (click)="redeem(reward)">
               @if (!claimEnabled() || (reward.claimable === 0 || reward.claimable === false)) {
                 ยังไม่เปิดให้รับ
+              } @else if (alreadyClaimed(reward)) {
+                แลกแล้ว
               } @else if (isLoggedIn()) {
                 รับ <span aria-hidden="true">↗</span>
               } @else {

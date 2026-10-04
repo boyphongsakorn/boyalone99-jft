@@ -14,6 +14,7 @@ interface Reward {
   readonly stock: number;
   readonly enabled?: number | boolean;
   readonly claimable?: number | boolean;
+  readonly one_per_user?: number | boolean;
   readonly contact_type?: 'email' | 'epic_id' | 'warframe_ign' | null;
 }
 
@@ -33,6 +34,7 @@ export class Rewards implements OnInit {
   protected readonly profileEmail = signal<string | null>(null);
   protected readonly profileEpic = signal<string | null>(null);
   protected readonly profileWarframe = signal<string | null>(null);
+  protected readonly claimedIds = signal<Set<number>>(new Set());
 
   constructor(private http: HttpClient, private router: Router) {
     if (typeof window !== 'undefined') {
@@ -71,7 +73,25 @@ export class Rewards implements OnInit {
     if (this.isLoggedIn()) {
       await this.fetchBalance();
       await this.fetchProfileContact();
+      await this.fetchRedemptions();
     }
+  }
+
+  private async fetchRedemptions() {
+    if (typeof window === 'undefined') return;
+    const raw = localStorage.getItem('user_profile');
+    if (!raw) return;
+    let userId: string | null = null;
+    try { userId = JSON.parse(raw).id || null; } catch { return; }
+    if (!userId) return;
+    try {
+      const redemptions: any = await this.http
+        .get(`${environment.apiUrl}/users/${encodeURIComponent(userId)}/redemptions?` + `t=${Date.now()}`)
+        .toPromise();
+      if (Array.isArray(redemptions)) {
+        this.claimedIds.set(new Set(redemptions.map((r: any) => Number(r.reward_id)).filter((n: number) => Number.isInteger(n))));
+      }
+    } catch { /* ignore — button stays enabled until backend rejects */ }
   }
 
   async fetchProfileContact() {
@@ -134,8 +154,12 @@ export class Rewards implements OnInit {
     return reward.claimable === undefined || reward.claimable === 1 || reward.claimable === true;
   }
 
+  protected alreadyClaimed(reward: Reward): boolean {
+    return (reward.one_per_user === 1 || reward.one_per_user === true) && this.claimedIds().has(reward.id);
+  }
+
   protected canRedeem(reward: Reward): boolean {
-    return this.claimEnabled() && this.isClaimable(reward) && this.isLoggedIn() && this.balance() >= reward.cost;
+    return this.claimEnabled() && this.isClaimable(reward) && !this.alreadyClaimed(reward) && this.isLoggedIn() && this.balance() >= reward.cost;
   }
 
   protected async redeem(reward: Reward): Promise<void> {
@@ -145,6 +169,10 @@ export class Rewards implements OnInit {
     }
     if (reward.claimable === 0 || reward.claimable === false) {
       this.notice.set('รางวัลนี้ยังไม่เปิดให้แลก');
+      return;
+    }
+    if (this.alreadyClaimed(reward)) {
+      this.notice.set('คุณแลกของรางวัลนี้ไปแล้ว (จำกัด 1 ครั้งต่อคน)');
       return;
     }
     if (!this.claimEnabled()) {
