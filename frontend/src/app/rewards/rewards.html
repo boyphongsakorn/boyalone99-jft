@@ -67,26 +67,26 @@
             <p>{{ reward.description }}</p>
             <div class="contact-warnings">
               @if (missingEmail(reward)) {
-                <span class="warning-badge email">⚠ Needs Email</span>
+                <span class="warning-badge email">⚠ ต้องการ Email</span>
               }
               @if (missingEpic(reward)) {
-                <span class="warning-badge epic">⚠ Needs Epic ID</span>
+                <span class="warning-badge epic">⚠ ต้องการ Epic ID (ชื่อในเกม Fortnite)</span>
               }
               @if (missingWarframe(reward)) {
-                <span class="warning-badge epic">⚠ Needs Warframe IGN</span>
+                <span class="warning-badge epic">⚠ ต้องการ Warframe IGN (ชื่อในเกม)</span>
               }
             </div>
-            <span class="stock-count">{{ reward.stock }} left</span>
+            <span class="stock-count">เหลือ {{ reward.stock }}</span>
           </div>
           <div class="reward-action">
             <span class="cost"><b>{{ reward.cost | number }}</b> AC</span>
             <button type="button" [disabled]="!claimEnabled() || !isLoggedIn() || reward.stock <= 0" (click)="redeem(reward)">
               @if (!claimEnabled()) {
-                Disabled
+                ยังไม่เปิดให้รับ
               } @else if (isLoggedIn()) {
-                Redeem <span aria-hidden="true">↗</span>
+                รับ <span aria-hidden="true">↗</span>
               } @else {
-                Login to redeem
+                ล็อกอินเพื่อรับ <span aria-hidden="true">↗</span>
               }
             </button>
           </div>
