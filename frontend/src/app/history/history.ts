@@ -31,7 +31,20 @@ export class History implements OnInit {
   protected readonly loading = signal(true);
   protected readonly notice = signal<string | null>(null);
 
+  protected readonly statusMap: Record<string, string> = {
+    'processing': 'กำลังดำเนินการ',
+    'shipped': 'จัดส่งแล้ว',
+    'delivered': 'ได้รับแล้ว',
+    'cancelled': 'ยกเลิกแล้ว',
+    'failed': 'ล้มเหลว',
+  };
+
   constructor(private http: HttpClient, private router: Router) {}
+
+  protected getStatus(status: string | null | undefined): string {
+    if (!status) return 'กำลังดำเนินการ';
+    return this.statusMap[status.toLowerCase()] || status;
+  }
 
   async ngOnInit() {
     if (typeof window === 'undefined') return;

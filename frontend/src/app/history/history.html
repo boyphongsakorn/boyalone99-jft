@@ -51,7 +51,7 @@
               @for (r of redeems(); track r.id) {
                 <li class="history-row">
                   <span class="amount">−{{ r.cost ?? '?' }} AC</span>
-                  <span class="reason">{{ r.reward_title || 'ของรางวัล' }} <small class="status">({{ r.status || 'กำลังดำเนินการ' }})</small></span>
+                  <span class="reason">{{ r.reward_title || 'ของรางวัล' }} <small class="status">({{ getStatus(r.status) }})</small></span>
                   <small>{{ r.redeemed_at }}</small>
                 </li>
               }

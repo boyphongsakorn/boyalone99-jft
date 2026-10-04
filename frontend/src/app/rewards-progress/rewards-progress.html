@@ -30,7 +30,7 @@
             <h3>{{ p.reward_title }}</h3>
             <div class="meta">
               <span>{{ p.redeemed_at }}</span>
-              <span class="status-pill">{{ p.status || 'กำลังดำเนินการ' }}</span>
+              <span class="status-pill">{{ getStatus(p.status) }}</span>
             </div>
             <div class="details">
               <span class="cost">ใช้ {{ p.cost }} AC</span>
