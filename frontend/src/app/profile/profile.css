@@ -78,6 +78,10 @@
 }
 
 .profile-header h1 { font-size: 2rem; margin: 0; transform: rotate(-1deg); }
+.lock-bar { align-items: center; background: #fff6d9; border: 2px solid #b28d31; border-radius: 6px; box-shadow: 3px 3px 0 var(--ink); color: #756023; display: flex; font-size: .8rem; gap: 10px; margin-bottom: 24px; padding: 12px 14px; }
+.lock-bar p { margin: 0; flex: 1; }
+.lock-bar a { color: var(--coral); font-weight: 700; text-decoration: none; text-decoration-color: var(--coral); }
+.save-btn.locked { background: var(--muted); color: #fff; cursor: not-allowed; }
 .subtitle { color: var(--muted); font-size: .85rem; margin: 4px 0 0; }
 
 .settings-grid { display: grid; gap: 24px; }

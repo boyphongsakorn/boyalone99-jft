@@ -72,6 +72,9 @@
               @if (missingEpic(reward)) {
                 <span class="warning-badge epic">⚠ Needs Epic ID</span>
               }
+              @if (missingWarframe(reward)) {
+                <span class="warning-badge epic">⚠ Needs Warframe IGN</span>
+              }
             </div>
             <span class="stock-count">{{ reward.stock }} left</span>
           </div>

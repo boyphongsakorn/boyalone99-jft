@@ -24,6 +24,19 @@
       </div>
     </header>
 
+    @if (pendingRedemptions() > 0) {
+      <div class="lock-bar" role="alert">
+        <span aria-hidden="true">🔒</span>
+        <p>คุณมีของรางวัลที่กำลังจัดส่งอยู่ {{ pendingRedemptions() }} ชิ้น — ไม่สามารถแก้ไขโปรไฟล์ได้ในขณะนี้ <a routerLink="/history">ดูสถานะในหน้าประวัติ &#8599;</a></p>
+      </div>
+    } @else if (lockNotice(); as msg) {
+      <div class="lock-bar" role="alert">
+        <span aria-hidden="true">🔒</span>
+        <p>{{ msg }} <a routerLink="/history">ดูหน้าประวัติ &#8599;</a></p>
+        <button type="button" (click)="dismissLockNotice()" aria-label="ปิด">✕</button>
+      </div>
+    }
+
     <div class="settings-grid">
       <div class="setting-row">
         <label for="email">Email Address</label>
@@ -32,7 +45,7 @@
             id="email" 
             type="email" 
             [(ngModel)]="email" 
-            [disabled]="!isEditing()"
+            [disabled]="!isEditing() || profileLocked()"
             placeholder="email@example.com"
           />
         </div>
@@ -45,7 +58,7 @@
             id="epic" 
             type="text" 
             [(ngModel)]="epicUsername" 
-            [disabled]="!isEditing()"
+            [disabled]="!isEditing() || profileLocked()"
             placeholder="EpicUsername"
           />
         </div>
@@ -58,7 +71,7 @@
             id="warframe" 
             type="text" 
             [(ngModel)]="warframeIgn" 
-            [disabled]="!isEditing()"
+            [disabled]="!isEditing() || profileLocked()"
             placeholder="WarframeIGN"
           />
         </div>
@@ -70,6 +83,7 @@
         class="save-btn" 
         (click)="toggleEdit()" 
         [disabled]="saveStatus() === 'saving'"
+        [class.locked]="profileLocked()"
       >
         @if (isEditing()) {
           @if (saveStatus() === 'saving') {

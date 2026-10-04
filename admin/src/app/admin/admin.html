@@ -59,7 +59,8 @@
           <select [(ngModel)]="form.contact_type">
             <option [value]="null">None</option>
             <option value="email">Email Address</option>
-            <option value="epic_id">Epic Games ID</option>
+            <option value="epic_id">Fortnite (Epic Games ID)</option>
+            <option value="warframe_ign">Warframe IGN</option>
           </select>
         </label>
         <div class="setting-row">
@@ -154,13 +155,24 @@
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>When</th><th>User</th><th>Reward</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th>When</th><th>User</th><th>Reward</th><th>Delivery To</th><th>Status</th><th></th></tr></thead>
           <tbody>
             @for (h of filteredRedemptions(); track h.id) {
               <tr class="process-row">
                 <td>{{ h.redeemed_at }}</td>
                 <td>{{ h.username }}<br /><small>{{ h.user_id }}</small></td>
                 <td>{{ h.reward_title }}<br /><small>{{ h.reward_cost }} AC · #{{ h.id }}</small></td>
+                <td>
+                  @if (h.contact_type === 'email') {
+                    {{ h.email || '❌ No Email' }}
+                  } @else if (h.contact_type === 'epic_id') {
+                    {{ h.epic_username || '❌ No Epic ID' }}
+                  } @else if (h.contact_type === 'warframe_ign') {
+                    {{ h.warframe_ign || '❌ No WF IGN' }}
+                  } @else {
+                    -
+                  }
+                </td>
                 <td>
                   <select (change)="updateRedemptionStatus(h.id, $any($event.target).value)" [value]="h.status || 'processing'" style="font-size:.7rem; padding:2px;">
                     <option value="processing">Processing</option>
@@ -174,7 +186,7 @@
                 </td>
               </tr>
             } @empty {
-              <tr><td colspan="5">No redemptions yet</td></tr>
+              <tr><td colspan="6">No redemptions yet</td></tr>
             }
           </tbody>
         </table>

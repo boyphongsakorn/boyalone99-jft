@@ -18,6 +18,8 @@ export class Profile implements OnInit {
   protected userAvatar = signal('https://cdn.discordapp.com/embed/avatars/0.png');
   protected isEditing = signal(false);
   protected saveStatus = signal<'idle' | 'saving' | 'saved'>('idle');
+  protected pendingRedemptions = signal(0);
+  protected lockNotice = signal<string | null>(null);
   protected linkedDiscord = signal<string | null>(null);
   protected linkedTwitch = signal<string | null>(null);
   protected linkedYoutube = signal<string | null>(null);
@@ -66,6 +68,7 @@ export class Profile implements OnInit {
     // Then load real data from database
     if (userId) {
       try {
+        this.refreshEditLock(userId);
         const profile: any = await this.http.get(`${environment.apiUrl}/users/${encodeURIComponent(userId)}`).toPromise();
         if (profile) {
           this.email.set(profile.email || '');
@@ -80,6 +83,28 @@ export class Profile implements OnInit {
       } catch (e) {
         console.error('Failed to fetch profile from database', e);
       }
+    }
+  }
+
+  // Profile editing is locked while a redeemed reward has not been delivered yet,
+  // so delivery contact info (email / game IGN) can't change mid-fulfilment.
+  protected profileLocked(): boolean {
+    return this.pendingRedemptions() > 0;
+  }
+
+  private async refreshEditLock(userId: string): Promise<void> {
+    try {
+      const res = await this.http.get(`${environment.apiUrl}/users/${encodeURIComponent(userId)}/redemptions`).toPromise();
+      const rows = Array.isArray(res) ? res : [];
+      const pending = rows.filter(
+        (r) => !r.status || r.status === 'processing' || r.status === 'shipped'
+      ).length;
+      this.pendingRedemptions.set(pending);
+      if (pending > 0) {
+        this.isEditing.set(false);
+      }
+    } catch (e) {
+      console.error('Failed to fetch redemptions for edit lock', e);
     }
   }
 
@@ -145,12 +170,24 @@ export class Profile implements OnInit {
   protected toggleEdit(): void {
     if (this.isEditing()) {
       this.saveProfile();
-    } else {
-      this.isEditing.set(true);
+      return;
     }
+    if (this.pendingRedemptions() > 0) {
+      this.lockNotice.set('ตอนนี้มีของรางวัลที่กำลังจัดส่งอยู่ — ยังแก้ไขโปรไฟล์ไม่ได้จนกว่าจะส่งมอบครบทุกชิ้น');
+      return;
+    }
+    this.isEditing.set(true);
+  }
+
+  protected dismissLockNotice(): void {
+    this.lockNotice.set(null);
   }
 
   protected async saveProfile(): Promise<void> {
+    if (this.pendingRedemptions() > 0) {
+      this.lockNotice.set('ตอนนี้มีของรางวัลที่กำลังจัดส่งอยู่ — ยังแก้ไขโปรไฟล์ไม่ได้จนกว่าจะส่งมอบครบทุกชิ้น');
+      return;
+    }
     this.saveStatus.set('saving');
     try {
       const saved = localStorage.getItem('user_profile');
@@ -169,6 +206,8 @@ export class Profile implements OnInit {
       this.saveStatus.set('saved');
       this.isEditing.set(false);
       setTimeout(() => this.saveStatus.set('idle'), 3000);
+      // Saved contact info may affect pending deliveries — re-check the lock
+      try { await this.refreshEditLock(userId); } catch { /* ignore */ }
     } catch (e) {
       console.error('Failed to save profile', e);
       this.saveStatus.set('idle');

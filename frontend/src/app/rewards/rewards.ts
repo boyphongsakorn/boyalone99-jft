@@ -13,7 +13,7 @@ interface Reward {
   readonly icon: string;
   readonly stock: number;
   readonly enabled?: number | boolean;
-  readonly contact_type?: 'email' | 'epic_id' | null;
+  readonly contact_type?: 'email' | 'epic_id' | 'warframe_ign' | null;
 }
 
 @Component({
@@ -31,6 +31,7 @@ export class Rewards implements OnInit {
   protected readonly claimEnabled = signal(false);
   protected readonly profileEmail = signal<string | null>(null);
   protected readonly profileEpic = signal<string | null>(null);
+  protected readonly profileWarframe = signal<string | null>(null);
 
   constructor(private http: HttpClient, private router: Router) {
     if (typeof window !== 'undefined') {
@@ -82,6 +83,7 @@ export class Rewards implements OnInit {
       const profile: any = await this.http.get(`${environment.apiUrl}/users/${encodeURIComponent(parsed.id)}`).toPromise();
       this.profileEmail.set(profile?.email || null);
       this.profileEpic.set(profile?.epic_username || null);
+      this.profileWarframe.set(profile?.warframe_ign || null);
     } catch (e) {
       console.error('Failed to fetch profile contact', e);
     }
@@ -95,12 +97,20 @@ export class Rewards implements OnInit {
     return reward.contact_type === 'epic_id';
   }
 
+  protected needsWarframe(reward: Reward): boolean {
+    return reward.contact_type === 'warframe_ign';
+  }
+
   protected missingEmail(reward: Reward): boolean {
     return this.needsEmail(reward) && this.isLoggedIn() && !this.profileEmail();
   }
 
   protected missingEpic(reward: Reward): boolean {
     return this.needsEpic(reward) && this.isLoggedIn() && !this.profileEpic();
+  }
+
+  protected missingWarframe(reward: Reward): boolean {
+    return this.needsWarframe(reward) && this.isLoggedIn() && !this.profileWarframe();
   }
 
   async fetchBalance() {
@@ -150,12 +160,17 @@ export class Rewards implements OnInit {
         const profile: any = await this.http.get(`${environment.apiUrl}/users/${encodeURIComponent(user.id)}`).toPromise();
         this.profileEmail.set(profile?.email || null);
         this.profileEpic.set(profile?.epic_username || null);
+        this.profileWarframe.set(profile?.warframe_ign || null);
         if (reward.contact_type === 'email' && !profile?.email) {
           this.notice.set('⚠ รางวัลนี้ต้องใช้ Email — กรุณาเพิ่ม Email ในหน้า My Profile ก่อนแลก');
           return;
         }
         if (reward.contact_type === 'epic_id' && !profile?.epic_username) {
           this.notice.set('⚠ รางวัลนี้ต้องใช้ Epic Games ID — กรุณาเพิ่ม Epic ID ในหน้า My Profile และแอด BoyAlone99 เป็นเพื่อนใน Epic Games');
+          return;
+        }
+        if (reward.contact_type === 'warframe_ign' && !profile?.warframe_ign) {
+          this.notice.set('⚠ รางวัลนี้ต้องใช้ Warframe IGN — กรุณาเพิ่มชื่อในเกมในหน้า My Profile ก่อนแลก');
           return;
         }
       } catch (e) {

@@ -317,7 +317,7 @@ app.put('/admin/redemptions/:id/status', checkAdminAuth, async (req, res) => {
 app.get('/admin/redemptions', checkAdminAuth, async (req, res) => {
   try {
     const [rows] = await pool.query(
-      `SELECT h.id, h.reward_id, h.redeemed_at, u.username, u.id AS user_id, r.title AS reward_title, r.cost AS reward_cost
+      `SELECT h.id, h.reward_id, h.redeemed_at, u.username, u.id AS user_id, u.email, u.epic_username, u.warframe_ign, r.title AS reward_title, r.cost AS reward_cost, r.contact_type
        FROM redemption_history h
        LEFT JOIN users u ON u.id = h.user_id
        LEFT JOIN rewards r ON r.id = h.reward_id

@@ -14,7 +14,7 @@ interface AdminReward {
   icon: string;
   stock: number;
   enabled: number | boolean;
-  contact_type?: 'email' | 'epic_id' | null;
+  contact_type?: 'email' | 'epic_id' | 'warframe_ign' | null;
 }
 
 interface AdminUser {
