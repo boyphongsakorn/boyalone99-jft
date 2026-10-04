@@ -39,6 +39,7 @@ const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || crypto.randomBytes(32).
   await backfill("ALTER TABLE rewards ADD COLUMN contact_type VARCHAR(50) NULL");
   await backfill("ALTER TABLE rewards ADD COLUMN claimable TINYINT(1) NOT NULL DEFAULT 1");
   await backfill("ALTER TABLE rewards ADD COLUMN one_per_user TINYINT(1) NOT NULL DEFAULT 0");
+  await backfill("ALTER TABLE rewards ADD COLUMN sort_order INT NOT NULL DEFAULT 0");
   await backfill("ALTER TABLE users ADD COLUMN warframe_ign VARCHAR(255) NULL");
 })();
 
@@ -63,10 +64,11 @@ app.get('/health', (req, res) => {
 // Get all rewards from Database (admin sees all via same list; frontend filters disabled)
 app.get('/rewards', async (req, res) => {
   try {
-    // Backfill for DBs created before the enabled / contact_type / claimable / one_per_user columns existed
+    // Backfill for DBs created before the enabled / contact_type / claimable / one_per_user / sort_order columns existed
     await pool.query('ALTER TABLE rewards ADD COLUMN IF NOT EXISTS enabled TINYINT(1) NOT NULL DEFAULT 1').catch(() => {});
     await pool.query('ALTER TABLE rewards ADD COLUMN IF NOT EXISTS claimable TINYINT(1) NOT NULL DEFAULT 1').catch(() => {});
     await pool.query('ALTER TABLE rewards ADD COLUMN IF NOT EXISTS one_per_user TINYINT(1) NOT NULL DEFAULT 0').catch(() => {});
+    await pool.query('ALTER TABLE rewards ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 0').catch(() => {});
     await pool.query("ALTER TABLE rewards ADD COLUMN IF NOT EXISTS contact_type VARCHAR(50) NULL").catch(() => {});
     // Fallback for MySQL (no IF NOT EXISTS support) — ignore duplicate-column error
     await pool.query("ALTER TABLE rewards ADD COLUMN contact_type VARCHAR(50) NULL").catch((e) => {
@@ -78,7 +80,10 @@ app.get('/rewards', async (req, res) => {
     await pool.query("ALTER TABLE rewards ADD COLUMN one_per_user TINYINT(1) NOT NULL DEFAULT 0").catch((e) => {
       if (e.code !== 'ER_DUP_FIELDNAME') throw e;
     });
-    const [rows] = await pool.query('SELECT *, (enabled <> 0) AS enabled, (claimable <> 0) AS claimable, (one_per_user <> 0) AS one_per_user FROM rewards');
+    await pool.query("ALTER TABLE rewards ADD COLUMN sort_order INT NOT NULL DEFAULT 0").catch((e) => {
+      if (e.code !== 'ER_DUP_FIELDNAME') throw e;
+    });
+    const [rows] = await pool.query('SELECT *, (enabled <> 0) AS enabled, (claimable <> 0) AS claimable, (one_per_user <> 0) AS one_per_user FROM rewards ORDER BY sort_order ASC, id ASC');
     res.json(rows);
   } catch (error) {
     console.error('Database Error:', error);
@@ -254,9 +259,13 @@ app.post('/admin/rewards', checkAdminAuth, async (req, res) => {
   try {
     const { title, description, cost, accent, icon, stock, enabled, claimable, one_per_user, contact_type } = req.body;
     if (!title || cost === undefined) return res.status(400).json({ error: 'title and cost required' });
+    await pool.query("ALTER TABLE rewards ADD COLUMN sort_order INT NOT NULL DEFAULT 0").catch((e) => {
+      if (e.code !== 'ER_DUP_FIELDNAME') throw e;
+    });
+    const [maxRow] = await pool.query('SELECT COALESCE(MAX(sort_order), -1) + 1 AS nextOrder FROM rewards');
     const [result] = await pool.query(
-      'INSERT INTO rewards (title, description, cost, accent, icon, stock, enabled, claimable, one_per_user, contact_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [title, description || '', Number(cost) || 0, accent || 'peach', icon || '✦', Number(stock) || 0, enabled === false || enabled === 0 || enabled === '0' ? 0 : 1, claimable === false || claimable === 0 || claimable === '0' ? 0 : 1, one_per_user === false || one_per_user === 0 || one_per_user === '0' ? 0 : 1, contact_type || null]
+      'INSERT INTO rewards (title, description, cost, accent, icon, stock, enabled, claimable, one_per_user, sort_order, contact_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [title, description || '', Number(cost) || 0, accent || 'peach', icon || '✦', Number(stock) || 0, enabled === false || enabled === 0 || enabled === '0' ? 0 : 1, claimable === false || claimable === 0 || claimable === '0' ? 0 : 1, one_per_user === false || one_per_user === 0 || one_per_user === '0' ? 0 : 1, Number(maxRow[0]?.nextOrder ?? 0), contact_type || null]
     );
     const [rows] = await pool.query('SELECT *, (enabled <> 0) AS enabled, (claimable <> 0) AS claimable, (one_per_user <> 0) AS one_per_user FROM rewards WHERE id = ?', [result.insertId]);
     res.status(201).json(rows[0]);
@@ -284,7 +293,35 @@ app.put('/admin/rewards/:id', checkAdminAuth, async (req, res) => {
   }
 });
 
-// Delete reward
+// Reorder rewards — body: { order: number[] } (ids top-to-bottom)
+app.put('/admin/rewards/reorder', checkAdminAuth, async (req, res) => {
+  try {
+    const { order } = req.body;
+    if (!Array.isArray(order)) return res.status(400).json({ error: 'order must be an array of ids' });
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      for (let i = 0; i < order.length; i++) {
+        const id = Number(order[i]);
+        if (!Number.isInteger(id)) continue;
+        await conn.query('UPDATE rewards SET sort_order = ? WHERE id = ?', [i, id]);
+      }
+      await conn.commit();
+    } catch (e) {
+      await conn.rollback();
+      throw e;
+    } finally {
+      conn.release();
+    }
+    const [rows] = await pool.query('SELECT *, (enabled <> 0) AS enabled, (claimable <> 0) AS claimable, (one_per_user <> 0) AS one_per_user FROM rewards ORDER BY sort_order ASC, id ASC');
+    res.json(rows);
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to update reward' });
+  }
+});
+
+// Delete reward (also reorder endpoint lives above to avoid :id='reorder' clash)
 app.delete('/admin/rewards/:id', checkAdminAuth, async (req, res) => {
   try {
     const { id } = req.params;

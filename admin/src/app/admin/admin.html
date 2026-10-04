@@ -104,8 +104,8 @@
           <table>
             <thead><tr><th>ID</th><th>Title</th><th>Cost</th><th>Stock</th><th>Visible</th><th>Claim</th><th>Limit</th><th></th></tr></thead>
             <tbody>
-              @for (r of rewards(); track r.id) {
-                <tr>
+              @for (r of rewards(); track r.id; let i = $index) {
+                <tr draggable="true" (dragstart)="onDragStart(i)" (dragover)="onDragOver($event)" (drop)="onDrop(i)">
                   <td>{{ r.id }}</td>
                   <td><b>{{ r.title }}</b><br /><small>{{ r.description }}</small></td>
                   <td>{{ r.cost }} AC</td>

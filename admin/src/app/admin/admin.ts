@@ -252,6 +252,37 @@ export class Admin implements OnInit {
     }
   }
 
+  protected draggedIndex: number | null = null;
+
+  protected onDragStart(index: number) {
+    this.draggedIndex = index;
+  }
+
+  protected onDragOver(event: DragEvent) {
+    event.preventDefault();
+  }
+
+  protected async onDrop(index: number) {
+    if (this.draggedIndex === null) return;
+    const current = [...this.rewards()];
+    const [moved] = current.splice(this.draggedIndex, 1);
+    current.splice(index, 0, moved);
+    this.rewards.set(current);
+    this.draggedIndex = null;
+
+    try {
+      const order = current.map((r) => r.id);
+      const updated = await this.http
+        .put<AdminReward[]>(`${environment.apiUrl}/admin/rewards/reorder`, { order })
+        .toPromise();
+      if (updated) this.rewards.set(updated);
+      this.notice.set('Order updated');
+    } catch (e) {
+      this.notice.set('Reorder failed');
+      await this.refreshAll();
+    }
+  }
+
   protected async toggleClaimable(r: AdminReward) {
     if (r.id === undefined) return;
     const full = this.rewards().find((x) => x.id === r.id);
