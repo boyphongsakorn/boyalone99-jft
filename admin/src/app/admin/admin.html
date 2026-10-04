@@ -137,7 +137,7 @@
               <tr>
                 <td><b>{{ u.username }}</b><br /><small>{{ u.id }}</small></td>
                 <td>{{ u.email || '-' }}</td>
-                <td><b>{{ u.alone_coin }}</b> AC</td>
+                <td><button type="button" class="link-btn" (click)="openHistory(u)" [attr.aria-label]="'View coin history of ' + u.username"><b>{{ u.alone_coin }}</b> AC</button></td>
                 <td>
                   <div class="coin-form">
                     <input type="number" [(ngModel)]="coinAmount[u.id]" placeholder="+100" />
@@ -156,6 +156,32 @@
         </table>
       </div>
     </section>
+    @if (historyUser(); as hu) {
+      <div class="modal-backdrop" (click)="closeHistory()">
+        <div class="modal-card" role="dialog" aria-modal="true" [attr.aria-label]="'Coin history of ' + hu.username" (click)="$event.stopPropagation()">
+          <header class="modal-head">
+            <h3>{{ hu.username }} — <b>{{ hu.alone_coin }}</b> AC</h3>
+            <button type="button" class="logout-btn" (click)="closeHistory()">Close</button>
+          </header>
+          @if (historyLoading()) {
+            <p class="empty">Loading…</p>
+          } @else if (historyRows().length === 0) {
+            <p class="empty">No coin history for this user.</p>
+          } @else {
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>When</th><th>Amount</th><th>Reason</th><th></th></tr></thead>
+                <tbody>
+                  @for (h of historyRows(); track h.id) {
+                    <tr><td>{{ h.created_at }}</td><td>{{ h.amount }} AC</td><td>{{ h.reason }}</td><td class="actions"><button type="button" class="danger" (click)="rollbackCoin(h.id)">Rollback</button></td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      </div>
+    }
   }
 
   @if (tab() === 'redemptions') {

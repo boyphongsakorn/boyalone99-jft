@@ -63,6 +63,11 @@ export class Admin implements OnInit {
   protected coinAmount: Record<string, number> = {};
   protected coinReason: Record<string, string> = {};
 
+  // per-user coin-history popup
+  protected readonly historyUser = signal<AdminUser | null>(null);
+  protected readonly historyRows = signal<any[]>([]);
+  protected readonly historyLoading = signal(false);
+
   // sub tenure seed (per user)
   protected seedMonths: Record<string, number> = {};
 
@@ -456,6 +461,26 @@ export class Admin implements OnInit {
     } catch (e) {
       console.error(e);
     }
+  }
+
+  protected openHistory(user: AdminUser): void {
+    this.historyUser.set(user);
+    this.historyRows.set(this.coinHistory().filter((h) => String(h?.user_id ?? h?.userId ?? '') === String(user.id)));
+    this.historyLoading.set(true);
+    this.http.get<any[]>(`${environment.apiUrl}/admin/coin-history`).toPromise()
+      .then((coins) => {
+        if (coins) {
+          this.coinHistory.set(coins);
+          this.historyRows.set(coins.filter((h) => String(h?.user_id ?? h?.userId ?? '') === String(user.id)));
+        }
+      })
+      .catch(() => { /* keep client-side filtered rows */ })
+      .finally(() => this.historyLoading.set(false));
+  }
+
+  protected closeHistory(): void {
+    this.historyUser.set(null);
+    this.historyRows.set([]);
   }
 
   protected async addCoins(user: AdminUser) {

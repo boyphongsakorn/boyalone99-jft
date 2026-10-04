@@ -69,4 +69,11 @@ td.actions button + button { margin-left: 6px; }
 .switch.on .knob { background: var(--teal); transform: translateX(26px); }
 .coin-form { display: flex; gap: 6px; }
 .coin-form input { max-width: 110px; }
+.link-btn { background: none; border: none; cursor: pointer; font: inherit; padding: 0; text-decoration: underline; text-decoration-color: #e0b44f; text-underline-offset: 4px; }
+.link-btn:hover { color: var(--coral); }
+.modal-backdrop { background: rgba(37,37,37,.45); inset: 0; padding: 24px; position: fixed; z-index: 50; display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; }
+.modal-card { background: var(--paper); border: 2px solid var(--ink); border-radius: 4px 12px 6px 10px; box-shadow: 6px 6px 0 var(--ink); margin: 60px auto 0; max-width: 720px; padding: 20px; width: 100%; }
+.modal-head { align-items: center; display: flex; justify-content: space-between; margin-bottom: 12px; }
+.modal-head h3 { margin: 0; font-size: 1rem; }
+.empty { color: var(--muted); font-size: .85rem; }
 .page-footer { border-top: 1px solid var(--line); color: var(--muted); display: flex; font-size: .7rem; justify-content: space-between; margin: 24px auto 0; max-width: 1180px; padding-top: 12px; }
