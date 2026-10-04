@@ -35,7 +35,7 @@
   }
 
   @if (tab() === 'rewards') {
-    <section class="panel-grid">
+    <section class="panel-grid rewards-layout">
       <div class="card form-card">
         <h2>{{ editingId() === null ? 'Add reward' : 'Edit reward #' + editingId() }}</h2>
         <label>Title<input [(ngModel)]="form.title" placeholder="Reward title" /></label>
