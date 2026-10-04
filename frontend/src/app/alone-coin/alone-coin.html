@@ -137,6 +137,7 @@
             @if (!isLoggedIn()) {
               <a class="claim-btn" routerLink="/login">ล็อกอินเพื่อรับ</a>
             } @else {
+              <a class="claim-btn" href="https://discord.gg/nyxM5YWk4t" target="_blank" rel="noopener">รับยศ LFG ใน Discord</a>
               <button type="button" class="claim-btn primary" (click)="claim('lfg')" [disabled]="lfgClaimed() || checking()">
                 {{ lfgClaimed() ? 'รับแล้ว ✓' : 'รับ +100 AC (LFG)' }}
               </button>
