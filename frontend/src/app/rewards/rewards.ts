@@ -13,6 +13,7 @@ interface Reward {
   readonly icon: string;
   readonly stock: number;
   readonly enabled?: number | boolean;
+  readonly claimable?: number | boolean;
   readonly contact_type?: 'email' | 'epic_id' | 'warframe_ign' | null;
 }
 
@@ -129,13 +130,21 @@ export class Rewards implements OnInit {
     }
   }
 
-  protected canRedeem(cost: number): boolean {
-    return this.claimEnabled() && this.isLoggedIn() && this.balance() >= cost;
+  protected isClaimable(reward: Reward): boolean {
+    return reward.claimable === undefined || reward.claimable === 1 || reward.claimable === true;
+  }
+
+  protected canRedeem(reward: Reward): boolean {
+    return this.claimEnabled() && this.isClaimable(reward) && this.isLoggedIn() && this.balance() >= reward.cost;
   }
 
   protected async redeem(reward: Reward): Promise<void> {
     if (reward.enabled === 0 || reward.enabled === false) {
       this.notice.set('รางวัลนี้ปิดให้แลกชั่วคราว');
+      return;
+    }
+    if (reward.claimable === 0 || reward.claimable === false) {
+      this.notice.set('รางวัลนี้ยังไม่เปิดให้แลก');
       return;
     }
     if (!this.claimEnabled()) {
@@ -146,7 +155,7 @@ export class Rewards implements OnInit {
       return;
     }
 
-    if (!this.canRedeem(reward.cost)) {
+    if (!this.canRedeem(reward)) {
       this.notice.set('Alone Coin ยังไม่พอสำหรับรางวัลนี้');
       return;
     }

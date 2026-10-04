@@ -62,14 +62,18 @@ app.get('/health', (req, res) => {
 // Get all rewards from Database (admin sees all via same list; frontend filters disabled)
 app.get('/rewards', async (req, res) => {
   try {
-    // Backfill for DBs created before the enabled / contact_type columns existed
+    // Backfill for DBs created before the enabled / contact_type / claimable columns existed
     await pool.query('ALTER TABLE rewards ADD COLUMN IF NOT EXISTS enabled TINYINT(1) NOT NULL DEFAULT 1').catch(() => {});
+    await pool.query('ALTER TABLE rewards ADD COLUMN IF NOT EXISTS claimable TINYINT(1) NOT NULL DEFAULT 1').catch(() => {});
     await pool.query("ALTER TABLE rewards ADD COLUMN IF NOT EXISTS contact_type VARCHAR(50) NULL").catch(() => {});
     // Fallback for MySQL (no IF NOT EXISTS support) — ignore duplicate-column error
     await pool.query("ALTER TABLE rewards ADD COLUMN contact_type VARCHAR(50) NULL").catch((e) => {
       if (e.code !== 'ER_DUP_FIELDNAME') throw e;
     });
-    const [rows] = await pool.query('SELECT *, (enabled <> 0) AS enabled FROM rewards');
+    await pool.query("ALTER TABLE rewards ADD COLUMN claimable TINYINT(1) NOT NULL DEFAULT 1").catch((e) => {
+      if (e.code !== 'ER_DUP_FIELDNAME') throw e;
+    });
+    const [rows] = await pool.query('SELECT *, (enabled <> 0) AS enabled, (claimable <> 0) AS claimable FROM rewards');
     res.json(rows);
   } catch (error) {
     console.error('Database Error:', error);
@@ -245,7 +249,7 @@ app.post('/admin/rewards', checkAdminAuth, async (req, res) => {
       'INSERT INTO rewards (title, description, cost, accent, icon, stock, enabled, claimable, contact_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [title, description || '', Number(cost) || 0, accent || 'peach', icon || '✦', Number(stock) || 0, enabled === false || enabled === 0 || enabled === '0' ? 0 : 1, claimable === false || claimable === 0 || claimable === '0' ? 0 : 1, contact_type || null]
     );
-    const [rows] = await pool.query('SELECT *, (enabled <> 0) AS enabled FROM rewards WHERE id = ?', [result.insertId]);
+    const [rows] = await pool.query('SELECT *, (enabled <> 0) AS enabled, (claimable <> 0) AS claimable FROM rewards WHERE id = ?', [result.insertId]);
     res.status(201).json(rows[0]);
   } catch (error) {
     console.error('Database Error:', error);
@@ -262,7 +266,7 @@ app.put('/admin/rewards/:id', checkAdminAuth, async (req, res) => {
       'UPDATE rewards SET title = ?, description = ?, cost = ?, accent = ?, icon = ?, stock = ?, enabled = ?, claimable = ?, contact_type = ? WHERE id = ?',
       [title, description || '', Number(cost) || 0, accent || 'peach', icon || '✦', Number(stock) || 0, enabled === false || enabled === 0 || enabled === '0' ? 0 : 1, claimable === false || claimable === 0 || claimable === '0' ? 0 : 1, contact_type || null, id]
     );
-    const [rows] = await pool.query('SELECT *, (enabled <> 0) AS enabled FROM rewards WHERE id = ?', [id]);
+    const [rows] = await pool.query('SELECT *, (enabled <> 0) AS enabled, (claimable <> 0) AS claimable FROM rewards WHERE id = ?', [id]);
     if (rows.length === 0) return res.status(404).json({ error: 'Reward not found' });
     res.json(rows[0]);
   } catch (error) {

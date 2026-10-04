@@ -80,8 +80,8 @@
           </div>
           <div class="reward-action">
             <span class="cost"><b>{{ reward.cost | number }}</b> AC</span>
-            <button type="button" [disabled]="!claimEnabled() || !isLoggedIn() || reward.stock <= 0" (click)="redeem(reward)">
-              @if (!claimEnabled()) {
+            <button type="button" [disabled]="!claimEnabled() || (reward.claimable === 0 || reward.claimable === false) || !isLoggedIn() || reward.stock <= 0" (click)="redeem(reward)">
+              @if (!claimEnabled() || (reward.claimable === 0 || reward.claimable === false)) {
                 ยังไม่เปิดให้รับ
               } @else if (isLoggedIn()) {
                 รับ <span aria-hidden="true">↗</span>
