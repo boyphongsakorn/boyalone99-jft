@@ -38,7 +38,7 @@
         <span class="step-number">01</span>
         <span class="step-icon" aria-hidden="true">✦</span>
         <div>
-          <h3>แต้มช่อง Twitch</h3>
+          <h3>แต้มช่อง Twitch <button type="button" class="info-btn" (click)="showChannelHowto.set(true)" aria-label="วิธีใช้ Channel Points">?</button></h3>
           <p>แลกแต้มช่องที่สะสมมาเป็น Alone Coin</p>
           <div class="claim-row">
             @if (!isLoggedIn()) {
@@ -152,6 +152,24 @@
       </li>
     </ol>
   </section>
+
+  @if (showChannelHowto()) {
+    <div class="modal-backdrop" (click)="showChannelHowto.set(false)">
+      <div class="modal-card" role="dialog" aria-modal="true" aria-label="วิธีแลก Channel Points" (click)="$event.stopPropagation()">
+        <header class="modal-head">
+          <h3>วิธีแลก Channel Points เป็น Alone Coin</h3>
+          <button type="button" class="claim-btn" (click)="showChannelHowto.set(false)">ปิด ✕</button>
+        </header>
+        <ol class="howto-list">
+          <li><b>1.</b> เปิด Twitch Chat ของช่อง <b>BoyAlone99</b> ขณะไลฟ์ (กดปุ่ม “เปิด Twitch Chat” ด้านบน)</li>
+          <li><b>2.</b> กดไอคอน <b>Channel Points</b> (รูปเหรียญ) ใต้ช่องพิมพ์แชท</li>
+          <li><b>3.</b> เลือกรางวัล <b>“แลก Alone Coin”</b> แล้วกด <b>Redeem / แลก</b> (ใช้ 1000 pts = 100 AC)</li>
+          <li><b>4.</b> กลับมาหน้านี้แล้วกดปุ่ม <b>“รับ AC (Channel Points)”</b> — เหรียญเข้าอัตโนมัติหลังแลกในแชท</li>
+        </ol>
+        <p class="howto-note">💡 ดูไลฟ์สะสมแต้มไว้ก่อน ยิ่งดูนานยิ่งได้แต้มเยอะ แล้วค่อยมาแลกเป็น AC</p>
+      </div>
+    </div>
+  }
 
   @if (notice(); as msg) {
     <p class="notice" role="status">{{ msg }}</p>

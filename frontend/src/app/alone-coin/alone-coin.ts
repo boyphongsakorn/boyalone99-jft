@@ -37,6 +37,7 @@ export class AloneCoin implements OnInit {
   protected readonly balance = signal<number | null>(null);
   protected readonly notice = signal<string | null>(null);
   protected readonly checking = signal(false);
+  protected readonly showChannelHowto = signal(false);
 
   constructor(private http: HttpClient) {
     if (typeof window !== 'undefined') {
