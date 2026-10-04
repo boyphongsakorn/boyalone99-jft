@@ -14,6 +14,7 @@ interface AdminReward {
   icon: string;
   stock: number;
   enabled: number | boolean;
+  claimable?: number | boolean;
   contact_type?: 'email' | 'epic_id' | 'warframe_ign' | null;
 }
 
@@ -75,7 +76,7 @@ export class Admin implements OnInit {
   }
 
   private emptyForm(): AdminReward {
-    return { title: '', description: '', cost: 100, accent: 'peach', icon: '✦', stock: 10, enabled: 1, contact_type: null };
+    return { title: '', description: '', cost: 100, accent: 'peach', icon: '✦', stock: 10, enabled: 1, claimable: 1, contact_type: null };
   }
 
   protected setTab(t: 'rewards' | 'users' | 'redemptions' | 'history' | 'settings') {
@@ -242,6 +243,24 @@ export class Admin implements OnInit {
     } catch (e) {
       console.error(e);
       this.notice.set('Save failed');
+    }
+  }
+
+  protected async toggleClaimable(r: AdminReward) {
+    if (r.id === undefined) return;
+    const full = this.rewards().find((x) => x.id === r.id);
+    if (!full) return;
+    const next: 0 | 1 = full.claimable ? 0 : 1;
+    this.rewards.update((v) => v.map((x) => (x.id === r.id ? { ...x, claimable: next } : x)));
+    try {
+      const updated = await this.http
+        .put<AdminReward>(`${environment.apiUrl}/admin/rewards/${r.id}`, { ...full, claimable: next })
+        .toPromise();
+      if (updated) this.rewards.update((v) => v.map((x) => (x.id === updated.id ? updated : x)));
+      this.notice.set(next ? `"${r.title}" claimable` : `"${r.title}" not claimable`);
+    } catch {
+      this.rewards.update((v) => v.map((x) => (x.id === r.id ? { ...x, claimable: full.claimable } : x)));
+      this.notice.set('Toggle failed');
     }
   }
 

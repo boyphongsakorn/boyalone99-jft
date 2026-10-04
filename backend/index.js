@@ -37,6 +37,7 @@ const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || crypto.randomBytes(32).
     }
   };
   await backfill("ALTER TABLE rewards ADD COLUMN contact_type VARCHAR(50) NULL");
+  await backfill("ALTER TABLE rewards ADD COLUMN claimable TINYINT(1) NOT NULL DEFAULT 1");
   await backfill("ALTER TABLE users ADD COLUMN warframe_ign VARCHAR(255) NULL");
 })();
 
@@ -174,6 +175,7 @@ app.post('/redeem', async (req, res) => {
     const r = reward[0];
 
     if (r.enabled === 0) return res.status(400).json({ error: 'Reward is currently disabled' });
+    if (r.claimable === 0) return res.status(400).json({ error: 'Reward is not claimable' });
     if (Number(r.stock) <= 0) return res.status(400).json({ error: 'Reward is out of stock' });
 
     const [user] = await pool.query('SELECT alone_coin FROM users WHERE id = ?', [userId]);
@@ -237,11 +239,11 @@ app.post('/admin/users/:id/coins', checkAdminAuth, async (req, res) => {
 // Create reward
 app.post('/admin/rewards', checkAdminAuth, async (req, res) => {
   try {
-    const { title, description, cost, accent, icon, stock, enabled, contact_type } = req.body;
+    const { title, description, cost, accent, icon, stock, enabled, claimable, contact_type } = req.body;
     if (!title || cost === undefined) return res.status(400).json({ error: 'title and cost required' });
     const [result] = await pool.query(
-      'INSERT INTO rewards (title, description, cost, accent, icon, stock, enabled, contact_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [title, description || '', Number(cost) || 0, accent || 'peach', icon || '✦', Number(stock) || 0, enabled === false || enabled === 0 || enabled === '0' ? 0 : 1, contact_type || null]
+      'INSERT INTO rewards (title, description, cost, accent, icon, stock, enabled, claimable, contact_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [title, description || '', Number(cost) || 0, accent || 'peach', icon || '✦', Number(stock) || 0, enabled === false || enabled === 0 || enabled === '0' ? 0 : 1, claimable === false || claimable === 0 || claimable === '0' ? 0 : 1, contact_type || null]
     );
     const [rows] = await pool.query('SELECT *, (enabled <> 0) AS enabled FROM rewards WHERE id = ?', [result.insertId]);
     res.status(201).json(rows[0]);
@@ -255,10 +257,10 @@ app.post('/admin/rewards', checkAdminAuth, async (req, res) => {
 app.put('/admin/rewards/:id', checkAdminAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, cost, accent, icon, stock, enabled, contact_type } = req.body;
+    const { title, description, cost, accent, icon, stock, enabled, claimable, contact_type } = req.body;
     await pool.query(
-      'UPDATE rewards SET title = ?, description = ?, cost = ?, accent = ?, icon = ?, stock = ?, enabled = ?, contact_type = ? WHERE id = ?',
-      [title, description || '', Number(cost) || 0, accent || 'peach', icon || '✦', Number(stock) || 0, enabled === false || enabled === 0 || enabled === '0' ? 0 : 1, contact_type || null, id]
+      'UPDATE rewards SET title = ?, description = ?, cost = ?, accent = ?, icon = ?, stock = ?, enabled = ?, claimable = ?, contact_type = ? WHERE id = ?',
+      [title, description || '', Number(cost) || 0, accent || 'peach', icon || '✦', Number(stock) || 0, enabled === false || enabled === 0 || enabled === '0' ? 0 : 1, claimable === false || claimable === 0 || claimable === '0' ? 0 : 1, contact_type || null, id]
     );
     const [rows] = await pool.query('SELECT *, (enabled <> 0) AS enabled FROM rewards WHERE id = ?', [id]);
     if (rows.length === 0) return res.status(404).json({ error: 'Reward not found' });

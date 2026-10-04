@@ -72,6 +72,15 @@
             <span class="knob"></span>
           </button>
         </div>
+        <div class="setting-row" style="margin-top: 8px;">
+          <span class="setting-info">
+            <b>Claimable</b>
+            <small>{{ form.claimable ? 'Allow redemption' : 'Disable redemption' }}</small>
+          </span>
+          <button type="button" role="switch" [attr.aria-checked]="!!form.claimable" class="switch" [class.on]="!!form.claimable" (click)="form.claimable = form.claimable ? 0 : 1">
+            <span class="knob"></span>
+          </button>
+        </div>
         <div class="form-actions">
           <button type="button" class="primary" (click)="saveReward()">{{ editingId() === null ? 'Add' : 'Save' }}</button>
           @if (editingId() !== null) {
@@ -84,7 +93,7 @@
         <h2>All rewards ({{ rewards().length }})</h2>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>ID</th><th>Title</th><th>Cost</th><th>Stock</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>ID</th><th>Title</th><th>Cost</th><th>Stock</th><th>Visible</th><th>Claim</th><th></th></tr></thead>
             <tbody>
               @for (r of rewards(); track r.id) {
                 <tr>
@@ -93,6 +102,7 @@
                   <td>{{ r.cost }} AC</td>
                   <td>{{ r.stock }}</td>
                   <td><button type="button" role="switch" [attr.aria-checked]="!!r.enabled" class="switch" [class.on]="!!r.enabled" [attr.aria-label]="'Toggle ' + r.title" (click)="toggleReward(r)"></button></td>
+                  <td><button type="button" role="switch" [attr.aria-checked]="!!r.claimable" class="switch" [class.on]="!!r.claimable" [attr.aria-label]="'Toggle Claim ' + r.title" (click)="toggleClaimable(r)"></button></td>
                   <td class="actions">
                     <button type="button" (click)="startEdit(r)">Edit</button>
                     <button type="button" class="danger" (click)="deleteReward(r.id)">Delete</button>
