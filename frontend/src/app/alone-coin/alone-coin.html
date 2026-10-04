@@ -73,9 +73,7 @@
                 {{ twitchClaimed() ? 'รับแล้ว ✓' : 'รับ +100 AC (Twitch)' }}
               </button>
               <a class="claim-btn" [href]="youtubeUrl()" target="_blank" rel="noopener">ติดตาม YouTube</a>
-              <button type="button" class="claim-btn" (click)="claim('youtube')" [disabled]="youtubeClaimed() || checking()">
-                {{ youtubeClaimed() ? 'รับแล้ว ✓' : 'รับ +100 AC (YouTube)' }}
-              </button>
+              <button type="button" class="claim-btn" disabled>รับ +100 AC (YouTube) [ปิดชั่วคราว]</button>
             }
           </div>
           @if (!twitchLinked() && isLoggedIn()) {
