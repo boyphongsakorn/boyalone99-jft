@@ -1,17 +1,17 @@
 <main class="rewards-progress">
   <header class="site-header">
-    <a class="brand" routerLink="/" aria-label="Back to rewards">
+    <a class="brand" routerLink="/" aria-label="กลับไปหน้าของรางวัล">
       <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
       <span>BoyAlone99 <small>Community</small></span>
     </a>
     <div class="header-right">
-      <a class="back-link" routerLink="/rewards">&#8592; Back to Rewards</a>
+      <a class="back-link" routerLink="/rewards">&#8592; กลับไปหน้าของรางวัล</a>
     </div>
   </header>
 
   <section class="hero">
-    <h1>Reward <em>Progress.</em></h1>
-    <p>Track your requested rewards and their delivery status</p>
+    <h1>ติดตาม <em>ของรางวัล.</em></h1>
+    <p>ดูของรางวัลที่ขอแลกและสถานะการจัดส่ง</p>
   </section>
 
   @if (notice(); as msg) {
@@ -19,10 +19,10 @@
   }
 
   @if (loading()) {
-    <p class="notice" style="text-align:center">Loading your rewards...</p>
+    <p class="notice" style="text-align:center">กำลังโหลดของรางวัล…</p>
   } @else {
     @if (processes().length === 0) {
-      <p class="empty">You haven't redeemed any rewards yet. Go get some!</p>
+      <p class="empty">ยังไม่เคยแลกของรางวัล ไปแลกกันเลย!</p>
     } @else {
       <div class="process-grid">
         @for (p of processes(); track p.id) {
@@ -30,10 +30,10 @@
             <h3>{{ p.reward_title }}</h3>
             <div class="meta">
               <span>{{ p.redeemed_at }}</span>
-              <span class="status-pill">{{ p.status || 'Processing' }}</span>
+              <span class="status-pill">{{ p.status || 'กำลังดำเนินการ' }}</span>
             </div>
             <div class="details">
-              <span class="cost">Cost: {{ p.cost }} AC</span>
+              <span class="cost">ใช้ {{ p.cost }} AC</span>
             </div>
           </article>
         }

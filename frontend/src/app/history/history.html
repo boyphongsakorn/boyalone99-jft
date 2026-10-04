@@ -2,19 +2,19 @@
   <div class="paper-line" aria-hidden="true"></div>
 
   <header class="site-header">
-    <a class="brand" routerLink="/" aria-label="Back to rewards">
+    <a class="brand" routerLink="/" aria-label="กลับไปหน้าของรางวัล">
       <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
       <span>BoyAlone99 <small>Community</small></span>
     </a>
     <div class="header-right">
-      <a class="back-link" routerLink="/">&#8592; Rewards</a>
-      <a class="back-link" routerLink="/profile">&#8592; Profile</a>
-      <button type="button" class="logout-btn" (click)="logout()">Logout</button>
+      <a class="back-link" routerLink="/">&#8592; ของรางวัล</a>
+      <a class="back-link" routerLink="/profile">&#8592; โปรไฟล์</a>
+      <button type="button" class="logout-btn" (click)="logout()">ออกจากระบบ</button>
     </div>
   </header>
 
   <section class="history-panel" aria-labelledby="history-title">
-    <h1 id="history-title">Coin & Reward History</h1>
+    <h1 id="history-title">ประวัติเหรียญและของรางวัล</h1>
     <p class="subtitle">เหรียญที่ได้รับ ใช้ไป และของที่แลกแล้ว</p>
 
     @if (loading()) {
@@ -43,7 +43,7 @@
         </div>
 
         <div class="history-col">
-          <h2>Redeemed rewards <small>ของที่แลกแล้ว</small></h2>
+          <h2>ของรางวัลที่แลกแล้ว</h2>
           @if (redeems().length === 0) {
             <p class="empty">ยังไม่เคยแลกของรางวัล</p>
           } @else {
@@ -51,7 +51,7 @@
               @for (r of redeems(); track r.id) {
                 <li class="history-row">
                   <span class="amount">−{{ r.cost ?? '?' }} AC</span>
-                  <span class="reason">{{ r.reward_title || 'Reward' }} <small class="status">({{ r.status || 'processing' }})</small></span>
+                  <span class="reason">{{ r.reward_title || 'ของรางวัล' }} <small class="status">({{ r.status || 'กำลังดำเนินการ' }})</small></span>
                   <small>{{ r.redeemed_at }}</small>
                 </li>
               }

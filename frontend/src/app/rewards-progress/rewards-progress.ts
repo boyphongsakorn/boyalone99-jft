@@ -37,7 +37,7 @@ export class RewardsProgress implements OnInit {
       const data = await this.http.get<RedemptionProcess[]>(`${environment.apiUrl}/users/${encodeURIComponent(userId)}/redemptions?${bust}`).toPromise();
       this.processes.set(Array.isArray(data) ? data : []);
     } catch (e) {
-      this.notice.set('Failed to load progress. Please try again later.');
+      this.notice.set('โหลดความคืบหน้าไม่สำเร็จ ลองอีกครั้ง');
     } finally {
       this.loading.set(false);
     }
