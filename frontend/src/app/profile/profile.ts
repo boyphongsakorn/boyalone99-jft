@@ -18,8 +18,14 @@ export class Profile implements OnInit {
   protected userAvatar = signal('https://cdn.discordapp.com/embed/avatars/0.png');
   protected isEditing = signal(false);
   protected saveStatus = signal<'idle' | 'saving' | 'saved'>('idle');
-  protected pendingRedemptions = signal(0);
+  protected pendingEmail = signal(0);
+  protected pendingEpic = signal(0);
+  protected pendingWarframe = signal(0);
   protected lockNotice = signal<string | null>(null);
+  // Originals — used to detect "clearing" a value that an in-process redemption needs
+  private origEmail = '';
+  private origEpic = '';
+  private origWarframe = '';
   protected linkedDiscord = signal<string | null>(null);
   protected linkedTwitch = signal<string | null>(null);
   protected linkedYoutube = signal<string | null>(null);
@@ -74,6 +80,9 @@ export class Profile implements OnInit {
           this.email.set(profile.email || '');
           this.epicUsername.set(profile.epic_username || '');
           this.warframeIgn.set(profile.warframe_ign || '');
+          this.origEmail = (profile.email || '').trim();
+          this.origEpic = (profile.epic_username || '').trim();
+          this.origWarframe = (profile.warframe_ign || '').trim();
           // DB is source of truth for links — show linked even if localStorage missed it
           if (profile.twitch_id || profile.twitch_username) {
             this.linkedTwitch.set(profile.twitch_username || 'Linked');
@@ -86,10 +95,29 @@ export class Profile implements OnInit {
     }
   }
 
-  // Profile editing is locked while a redeemed reward has not been delivered yet,
-  // so delivery contact info (email / game IGN) can't change mid-fulfilment.
-  protected profileLocked(): boolean {
-    return this.pendingRedemptions() > 0;
+  // Editing stays open, but a field tied to an in-process redemption cannot be
+  // emptied — admin still needs it to deliver the gift.
+  protected emailInProcess(): boolean {
+    return this.pendingEmail() > 0;
+  }
+  protected epicInProcess(): boolean {
+    return this.pendingEpic() > 0;
+  }
+  protected warframeInProcess(): boolean {
+    return this.pendingWarframe() > 0;
+  }
+
+  protected emailEmptied(): boolean {
+    return this.isEditing() && this.emailInProcess() && !this.email().trim();
+  }
+  protected epicEmptied(): boolean {
+    return this.isEditing() && this.epicInProcess() && !this.epicUsername().trim();
+  }
+  protected warframeEmptied(): boolean {
+    return this.isEditing() && this.warframeInProcess() && !this.warframeIgn().trim();
+  }
+  protected hasEmptiedLockedField(): boolean {
+    return this.emailEmptied() || this.epicEmptied() || this.warframeEmptied();
   }
 
   private async refreshEditLock(userId: string): Promise<void> {
@@ -97,12 +125,11 @@ export class Profile implements OnInit {
       const res = await this.http.get(`${environment.apiUrl}/users/${encodeURIComponent(userId)}/redemptions`).toPromise();
       const rows = Array.isArray(res) ? res : [];
       const pending = rows.filter(
-        (r) => !r.status || r.status === 'processing' || r.status === 'shipped'
-      ).length;
-      this.pendingRedemptions.set(pending);
-      if (pending > 0) {
-        this.isEditing.set(false);
-      }
+        (r: any) => !r.status || r.status === 'processing' || r.status === 'shipped'
+      );
+      this.pendingEmail.set(pending.filter((r: any) => r.contact_type === 'email').length);
+      this.pendingEpic.set(pending.filter((r: any) => r.contact_type === 'epic_id').length);
+      this.pendingWarframe.set(pending.filter((r: any) => r.contact_type === 'warframe_ign').length);
     } catch (e) {
       console.error('Failed to fetch redemptions for edit lock', e);
     }
@@ -169,11 +196,12 @@ export class Profile implements OnInit {
 
   protected toggleEdit(): void {
     if (this.isEditing()) {
+      this.lockNotice.set(null);
+      if (this.hasEmptiedLockedField()) {
+        this.lockNotice.set('มีของรางวัลที่กำลังจัดส่งอยู่ — ห้ามลบข้อมูลที่ต้องใช้ส่งของออกจนกว่าจะส่งมอบครบทุกชิ้น');
+        return;
+      }
       this.saveProfile();
-      return;
-    }
-    if (this.pendingRedemptions() > 0) {
-      this.lockNotice.set('ตอนนี้มีของรางวัลที่กำลังจัดส่งอยู่ — ยังแก้ไขโปรไฟล์ไม่ได้จนกว่าจะส่งมอบครบทุกชิ้น');
       return;
     }
     this.isEditing.set(true);
@@ -184,8 +212,8 @@ export class Profile implements OnInit {
   }
 
   protected async saveProfile(): Promise<void> {
-    if (this.pendingRedemptions() > 0) {
-      this.lockNotice.set('ตอนนี้มีของรางวัลที่กำลังจัดส่งอยู่ — ยังแก้ไขโปรไฟล์ไม่ได้จนกว่าจะส่งมอบครบทุกชิ้น');
+    if (this.hasEmptiedLockedField()) {
+      this.lockNotice.set('มีของรางวัลที่กำลังจัดส่งอยู่ — ห้ามลบข้อมูลที่ต้องใช้ส่งของออกจนกว่าจะส่งมอบครบทุกชิ้น');
       return;
     }
     this.saveStatus.set('saving');
@@ -202,6 +230,9 @@ export class Profile implements OnInit {
         this.email.set(updated.email || '');
         this.epicUsername.set(updated.epic_username || '');
         this.warframeIgn.set(updated.warframe_ign || '');
+        this.origEmail = (updated.email || '').trim();
+        this.origEpic = (updated.epic_username || '').trim();
+        this.origWarframe = (updated.warframe_ign || '').trim();
       }
       this.saveStatus.set('saved');
       this.isEditing.set(false);

@@ -286,7 +286,7 @@ app.get('/users/:userId/redemptions', async (req, res) => {
   try {
     const { userId } = req.params;
     const [rows] = await pool.query(
-      `SELECT h.id, h.reward_id, h.redeemed_at, h.status, r.title AS reward_title, r.cost
+      `SELECT h.id, h.reward_id, h.redeemed_at, h.status, r.title AS reward_title, r.cost, r.contact_type
        FROM redemption_history h
        LEFT JOIN rewards r ON r.id = h.reward_id
        WHERE h.user_id = ? ORDER BY h.redeemed_at DESC LIMIT 100`,

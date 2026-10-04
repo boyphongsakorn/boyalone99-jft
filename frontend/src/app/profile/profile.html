@@ -24,14 +24,20 @@
       </div>
     </header>
 
-    @if (pendingRedemptions() > 0) {
+    @if (emailInProcess() || epicInProcess() || warframeInProcess()) {
       <div class="lock-bar" role="alert">
         <span aria-hidden="true">🔒</span>
-        <p>คุณมีของรางวัลที่กำลังจัดส่งอยู่ {{ pendingRedemptions() }} ชิ้น — ไม่สามารถแก้ไขโปรไฟล์ได้ในขณะนี้ <a routerLink="/history">ดูสถานะในหน้าประวัติ &#8599;</a></p>
+        <p>คุณมีของรางวัลที่กำลังจัดส่งอยู่
+          @if (emailInProcess()) { <span class="lock-tag">Email</span> }
+          @if (epicInProcess()) { <span class="lock-tag">Epic ID</span> }
+          @if (warframeInProcess()) { <span class="lock-tag">Warframe IGN</span> }
+          — ห้ามลบข้อมูลเหล่านี้ออกจนกว่าจะส่งมอบครบ <a routerLink="/history">ดูสถานะในหน้าประวัติ &#8599;</a>
+        </p>
       </div>
-    } @else if (lockNotice(); as msg) {
-      <div class="lock-bar" role="alert">
-        <span aria-hidden="true">🔒</span>
+    }
+    @if (lockNotice(); as msg) {
+      <div class="lock-bar error" role="alert">
+        <span aria-hidden="true">⚠</span>
         <p>{{ msg }} <a routerLink="/history">ดูหน้าประวัติ &#8599;</a></p>
         <button type="button" (click)="dismissLockNotice()" aria-label="ปิด">✕</button>
       </div>
@@ -45,8 +51,9 @@
             id="email" 
             type="email" 
             [(ngModel)]="email" 
-            [disabled]="!isEditing() || profileLocked()"
+            [disabled]="!isEditing()"
             placeholder="email@example.com"
+            [class.locked-empty]="emailEmptied()"
           />
         </div>
       </div>
@@ -58,8 +65,9 @@
             id="epic" 
             type="text" 
             [(ngModel)]="epicUsername" 
-            [disabled]="!isEditing() || profileLocked()"
+            [disabled]="!isEditing()"
             placeholder="EpicUsername"
+            [class.locked-empty]="epicEmptied()"
           />
         </div>
       </div>
@@ -71,8 +79,9 @@
             id="warframe" 
             type="text" 
             [(ngModel)]="warframeIgn" 
-            [disabled]="!isEditing() || profileLocked()"
+            [disabled]="!isEditing()"
             placeholder="WarframeIGN"
+            [class.locked-empty]="warframeEmptied()"
           />
         </div>
       </div>
@@ -83,7 +92,6 @@
         class="save-btn" 
         (click)="toggleEdit()" 
         [disabled]="saveStatus() === 'saving'"
-        [class.locked]="profileLocked()"
       >
         @if (isEditing()) {
           @if (saveStatus() === 'saving') {
