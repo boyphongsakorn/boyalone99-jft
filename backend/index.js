@@ -275,29 +275,19 @@ app.post('/admin/rewards', checkAdminAuth, async (req, res) => {
   }
 });
 
-// Update reward
-app.put('/admin/rewards/:id', checkAdminAuth, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { title, description, cost, accent, icon, stock, enabled, claimable, one_per_user, contact_type } = req.body;
-    await pool.query(
-      'UPDATE rewards SET title = ?, description = ?, cost = ?, accent = ?, icon = ?, stock = ?, enabled = ?, claimable = ?, one_per_user = ?, contact_type = ? WHERE id = ?',
-      [title, description || '', Number(cost) || 0, accent || 'peach', icon || '✦', Number(stock) || 0, enabled === false || enabled === 0 || enabled === '0' ? 0 : 1, claimable === false || claimable === 0 || claimable === '0' ? 0 : 1, one_per_user === false || one_per_user === 0 || one_per_user === '0' ? 0 : 1, contact_type || null, id]
-    );
-    const [rows] = await pool.query('SELECT *, (enabled <> 0) AS enabled, (claimable <> 0) AS claimable, (one_per_user <> 0) AS one_per_user FROM rewards WHERE id = ?', [id]);
-    if (rows.length === 0) return res.status(404).json({ error: 'Reward not found' });
-    res.json(rows[0]);
-  } catch (error) {
-    console.error('Database Error:', error);
-    res.status(500).json({ error: 'Failed to update reward' });
-  }
-});
-
 // Reorder rewards — body: { order: number[] } (ids top-to-bottom)
+// NOTE: must be defined BEFORE /admin/rewards/:id so 'reorder' is not treated as an id
 app.put('/admin/rewards/reorder', checkAdminAuth, async (req, res) => {
   try {
     const { order } = req.body;
     if (!Array.isArray(order)) return res.status(400).json({ error: 'order must be an array of ids' });
+
+    // Ensure column exists (safe backfill)
+    await pool.query("ALTER TABLE rewards ADD COLUMN sort_order INT NOT NULL DEFAULT 0").catch((e) => {
+      if (e.code !== 'ER_DUP_FIELDNAME') throw e;
+    });
+
+    // Use a transaction to ensure all orders are updated together
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
@@ -315,6 +305,26 @@ app.put('/admin/rewards/reorder', checkAdminAuth, async (req, res) => {
     }
     const [rows] = await pool.query('SELECT *, (enabled <> 0) AS enabled, (claimable <> 0) AS claimable, (one_per_user <> 0) AS one_per_user FROM rewards ORDER BY sort_order ASC, id ASC');
     res.json(rows);
+  } catch (error) {
+    console.error('Reorder Error:', error);
+    res.status(500).json({ error: 'Failed to reorder rewards' });
+  }
+});
+
+// Update reward
+app.put('/admin/rewards/:id', checkAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    // Guard: if id is not numeric, this route was hit by mistake (e.g. /reorder defined after)
+    if (!/^\d+$/.test(String(id))) return res.status(404).json({ error: 'Reward not found' });
+    const { title, description, cost, accent, icon, stock, enabled, claimable, one_per_user, contact_type } = req.body;
+    await pool.query(
+      'UPDATE rewards SET title = ?, description = ?, cost = ?, accent = ?, icon = ?, stock = ?, enabled = ?, claimable = ?, one_per_user = ?, contact_type = ? WHERE id = ?',
+      [title, description || '', Number(cost) || 0, accent || 'peach', icon || '✦', Number(stock) || 0, enabled === false || enabled === 0 || enabled === '0' ? 0 : 1, claimable === false || claimable === 0 || claimable === '0' ? 0 : 1, one_per_user === false || one_per_user === 0 || one_per_user === '0' ? 0 : 1, contact_type || null, id]
+    );
+    const [rows] = await pool.query('SELECT *, (enabled <> 0) AS enabled, (claimable <> 0) AS claimable, (one_per_user <> 0) AS one_per_user FROM rewards WHERE id = ?', [id]);
+    if (rows.length === 0) return res.status(404).json({ error: 'Reward not found' });
+    res.json(rows[0]);
   } catch (error) {
     console.error('Database Error:', error);
     res.status(500).json({ error: 'Failed to update reward' });
