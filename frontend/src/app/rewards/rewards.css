@@ -76,6 +76,21 @@ h1 em { color: var(--coral); font-style: normal; }
 .login-prompt strong { color: var(--coral); font-size: 1rem; }
 .login-prompt:hover { background: #f3e9c9; }
 .notice { background: #fff6d9; border: 1px dashed #b28d31; color: #756023; font-size: 0.82rem; margin-bottom: 26px; padding: 10px 14px; }
+.coin-alert-bar {
+  align-items: center;
+  background: #fffbe6;
+  border: 2px solid #e0b44f;
+  border-radius: 12px;
+  box-shadow: 2px 2px 0 var(--ink);
+  display: flex;
+  font-size: 0.85rem;
+  gap: 10px;
+  margin-bottom: 24px;
+  padding: 10px 16px;
+}
+.coin-alert-bar .alert-icon { font-size: 1.1rem; }
+.coin-alert-bar .alert-text { color: #756023; }
+.coin-alert-bar a { color: var(--ink); font-weight: bold; margin-left: 4px; text-decoration: underline; }
 .reward-section { border-top: 2px solid var(--ink); padding-top: 18px; }
 .section-heading { align-items: baseline; display: flex; justify-content: space-between; margin-bottom: 22px; }
 .section-heading h2 { font-size: 1.35rem; margin: 0; }
