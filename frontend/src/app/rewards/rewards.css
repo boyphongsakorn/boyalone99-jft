@@ -79,6 +79,25 @@ h1 em { color: var(--coral); font-style: normal; }
 .reward-section { border-top: 2px solid var(--ink); padding-top: 18px; }
 .section-heading { align-items: baseline; display: flex; justify-content: space-between; margin-bottom: 22px; }
 .section-heading h2 { font-size: 1.35rem; margin: 0; }
+.search-box { 
+  display: flex; 
+  align-items: center; 
+  background: #fff; 
+  border: 2px solid var(--ink); 
+  border-radius: 99px; 
+  padding: 4px 12px; 
+  gap: 8px; 
+  width: 240px;
+}
+.search-box .search-icon { font-size: 0.8rem; }
+.search-box input { 
+  border: none; 
+  background: transparent; 
+  font-family: inherit; 
+  font-size: 0.75rem; 
+  width: 100%; 
+  outline: none; 
+}
 .reward-grid { display: grid; gap: 16px; grid-template-columns: repeat(4, 1fr); }
 .reward-card { border: 2px solid var(--ink); border-radius: 4px 8px 5px 7px; box-shadow: 3px 3px 0 var(--ink); display: flex; flex-direction: column; min-height: 305px; padding: 18px; transform: rotate(-0.6deg); transition: transform 160ms ease, box-shadow 160ms ease; }
 .reward-card:nth-child(even) { transform: rotate(0.8deg); }

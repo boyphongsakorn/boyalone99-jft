@@ -50,7 +50,10 @@
   <section class="reward-section" aria-labelledby="available-title">
     <div class="section-heading">
       <h2 id="available-title">ของรางวัลที่มี</h2>
-      <!-- <span>pick a little something</span> -->
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" [(ngModel)]="searchQuery" placeholder="ค้นหาของรางวัล..." aria-label="Search rewards">
+      </div>
     </div>
 
     <div class="reward-grid">
@@ -59,7 +62,7 @@
       } @else if (rewards().length === 0) {
         <p class="notice" role="status">ยังไม่มีของรางวัลตอนนี้ กลับมาดูใหม่เร็ว ๆ นี้</p>
       } @else {
-      @for (reward of rewards(); track reward.title) {
+      @for (reward of filteredRewards; track reward.title) {
         <article class="reward-card" [class]="reward.accent">
           <div class="reward-art" aria-hidden="true">{{ reward.icon }}</div>
           <div class="reward-content">

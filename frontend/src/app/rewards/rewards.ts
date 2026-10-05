@@ -1,6 +1,7 @@
 import { Component, signal, OnInit } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { RouterLink, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 
@@ -19,7 +20,7 @@ interface Reward {
 }
 
 @Component({
-  imports: [DecimalPipe, RouterLink],
+  imports: [DecimalPipe, RouterLink, FormsModule],
   selector: 'app-rewards',
   styleUrl: './rewards.css',
   templateUrl: './rewards.html',
@@ -31,6 +32,7 @@ export class Rewards implements OnInit {
   protected readonly rewards = signal<readonly Reward[]>([]);
   protected readonly loading = signal(true);
   protected readonly claimEnabled = signal(false);
+  protected readonly searchQuery = signal('');
   protected readonly profileEmail = signal<string | null>(null);
   protected readonly profileEpic = signal<string | null>(null);
   protected readonly profileWarframe = signal<string | null>(null);
@@ -54,7 +56,8 @@ export class Rewards implements OnInit {
     try {
       const data = await this.http.get<Reward[]>(`${environment.apiUrl}/rewards?${bust}`).toPromise();
       if (data) {
-        this.rewards.set(data.filter((r: any) => r.enabled === undefined || r.enabled === 1 || r.enabled === true));
+        const filtered = data.filter((r: any) => r.enabled === undefined || r.enabled === 1 || r.enabled === true);
+        this.rewards.set(filtered);
       }
     } catch (e) {
       console.error('Failed to fetch rewards', e);
@@ -120,6 +123,15 @@ export class Rewards implements OnInit {
 
   protected needsWarframe(reward: Reward): boolean {
     return reward.contact_type === 'warframe_ign';
+  }
+
+  protected get filteredRewards() {
+    const q = this.searchQuery().toLowerCase().trim();
+    if (!q) return this.rewards();
+    return this.rewards().filter(r => 
+      r.title.toLowerCase().includes(q) || 
+      r.description.toLowerCase().includes(q)
+    );
   }
 
   protected missingEmail(reward: Reward): boolean {
