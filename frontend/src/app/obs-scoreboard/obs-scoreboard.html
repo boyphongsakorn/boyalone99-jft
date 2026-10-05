@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BoyAlone99 Alone Coin Leaderboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { 
+      width: 300px; 
+      height: 1080px; 
+      background: #1a1a1a; 
+      color: #f0f0f0; 
+      font-family: 'Playpen Sans Thai', 'Segoe Print', cursive;
+      overflow: hidden;
+    }
+    .scoreboard {
+      width: 100%;
+      height: 100%;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      font-size: 24px;
+      color: #e0b44f;
+      margin-bottom: 5px;
+    }
+    .header p {
+      font-size: 14px;
+      color: #aaa;
+    }
+    .leaderboard {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 10px;
+    }
+    .user-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+      padding: 10px;
+      border-radius: 8px;
+      background: #252525;
+      border-left: 3px solid #e0b44f;
+    }
+    .rank {
+      width: 30px;
+      height: 30px;
+      background: #e0b44f;
+      color: #1a1a1a;
+      font-weight: bold;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      margin-right: 12px;
+    }
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #333;
+      margin-right: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: #fff;
+      font-weight: bold;
+    }
+    .info {
+      flex: 1;
+    }
+    .username {
+      font-size: 16px;
+      font-weight: bold;
+      margin-bottom: 3px;
+    }
+    .balance {
+      font-size: 14px;
+      color: #e0b44f;
+    }
+    .footer {
+      text-align: center;
+      font-size: 12px;
+      color: #666;
+      margin-top: 20px;
+    }
+    .loading {
+      text-align: center;
+      padding: 50px;
+      color: #aaa;
+      font-size: 16px;
+    }
+    .error {
+      text-align: center;
+      padding: 50px;
+      color: #ff6b6b;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="scoreboard">
+    <div class="header">
+      <h1>Alone Coin</h1>
+      <p>Top Users</p>
+    </div>
+    <div class="leaderboard" id="leaderboard">
+      <div class="loading">กำลังโหลด...</div>
+    </div>
+    <div class="footer">
+      BoyAlone99 Community
+    </div>
+  </div>
+
+  <script>
+    const apiUrl = 'https://jft-backend.pwisetthon.com';
+    const leaderboard = document.getElementById('leaderboard');
+
+    async function fetchLeaderboard() {
+      try {
+        const response = await fetch(`${apiUrl}/admin/users`);
+        if (!response.ok) throw new Error('Failed to fetch users');
+        const users = await response.json();
+        
+        // Sort by alone_coin descending
+        const sortedUsers = users.sort((a, b) => b.alone_coin - a.alone_coin).slice(0, 10);
+        
+        leaderboard.innerHTML = '';
+        
+        sortedUsers.forEach((user, index) => {
+          const userItem = document.createElement('div');
+          userItem.className = 'user-item';
+          
+          const rank = document.createElement('div');
+          rank.className = 'rank';
+          rank.textContent = index + 1;
+          
+          const avatar = document.createElement('div');
+          avatar.className = 'avatar';
+          avatar.textContent = user.username.charAt(0).toUpperCase();
+          
+          const info = document.createElement('div');
+          info.className = 'info';
+          
+          const username = document.createElement('div');
+          username.className = 'username';
+          username.textContent = user.username;
+          
+          const balance = document.createElement('div');
+          balance.className = 'balance';
+          balance.textContent = user.alone_coin.toLocaleString() + ' AC';
+          
+          info.appendChild(username);
+          info.appendChild(balance);
+          
+          userItem.appendChild(rank);
+          userItem.appendChild(avatar);
+          userItem.appendChild(info);
+          
+          leaderboard.appendChild(userItem);
+        });
+        
+        if (sortedUsers.length === 0) {
+          leaderboard.innerHTML = '<div class="error">ไม่มีผู้ใช้ในระบบ</div>';
+        }
+      } catch (error) {
+        leaderboard.innerHTML = `<div class="error">เกิดข้อผิดพลาด: ${error.message}</div>`;
+      }
+    }
+
+    // Initial load
+    fetchLeaderboard();
+    
+    // Refresh every 30 seconds
+    setInterval(fetchLeaderboard, 30000);
+  </script>
+</body>
+</html>

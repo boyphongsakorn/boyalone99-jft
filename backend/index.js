@@ -232,6 +232,19 @@ app.get('/admin/users', checkAdminAuth, async (req, res) => {
   }
 });
 
+// Public leaderboard - top 10 users by coin balance
+app.get('/leaderboard', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      'SELECT id, username, alone_coin FROM users WHERE alone_coin > 0 ORDER BY alone_coin DESC LIMIT 10'
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to fetch leaderboard' });
+  }
+});
+
 // Add coin to user
 app.post('/admin/users/:id/coins', checkAdminAuth, async (req, res) => {
   try {
