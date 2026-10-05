@@ -131,9 +131,9 @@ export class Rewards implements OnInit {
     return this.rewards().filter(r => 
       r.title.toLowerCase().includes(q) || 
       r.description.toLowerCase().includes(q) ||
-      (r.contact_type === 'email' && q.includes('email')) ||
-      (r.contact_type === 'epic_id' && q.includes('epic')) ||
-      (r.contact_type === 'warframe_ign' && q.includes('warframe'))
+      (r.contact_type === 'email' && (q.includes('e') || q.includes('email'))) ||
+      (r.contact_type === 'epic_id' && (q.includes('ep') || q.includes('epic'))) ||
+      (r.contact_type === 'warframe_ign' && (q.includes('w') || q.includes('warframe')))
     );
   }
 
