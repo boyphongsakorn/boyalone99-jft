@@ -76,6 +76,7 @@ h1 em { color: var(--coral); font-style: normal; }
 .login-prompt strong { color: var(--coral); font-size: 1rem; }
 .login-prompt:hover { background: #f3e9c9; }
 .notice { background: #fff6d9; border: 1px dashed #b28d31; color: #756023; font-size: 0.82rem; margin-bottom: 26px; padding: 10px 14px; }
+.alert-container { margin-inline: auto; max-width: 1180px; margin-bottom: 24px; }
 .coin-alert-bar {
   align-items: center;
   background: #fffbe6;
@@ -85,8 +86,8 @@ h1 em { color: var(--coral); font-style: normal; }
   display: flex;
   font-size: 0.85rem;
   gap: 10px;
-  margin-bottom: 24px;
   padding: 10px 16px;
+  width: fit-content;
 }
 .coin-alert-bar .alert-icon { font-size: 1.1rem; }
 .coin-alert-bar .alert-text { color: #756023; }

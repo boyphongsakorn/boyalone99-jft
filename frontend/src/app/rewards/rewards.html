@@ -47,10 +47,14 @@
     <p class="notice" role="status">{{ message }}</p>
   }
 
-  <div class="coin-alert-bar">
-    <span class="alert-icon">💡</span>
-    <span class="alert-text">ยังไม่มีเหรียญ? <a routerLink="/alone-coin">ดูวิธีรับ Alone Coin ได้ที่นี่</a></span>
-  </div>
+  @if (isLoggedIn() && balance() === 0) {
+    <div class="alert-container">
+      <div class="coin-alert-bar">
+        <span class="alert-icon">💡</span>
+        <span class="alert-text">ยังไม่มีเหรียญ? <a routerLink="/alone-coin">ดูวิธีรับ Alone Coin ได้ที่นี่</a></span>
+      </div>
+    </div>
+  }
 
   <section class="reward-section" aria-labelledby="available-title">
     <div class="section-heading">
