@@ -130,7 +130,10 @@ export class Rewards implements OnInit {
     if (!q) return this.rewards();
     return this.rewards().filter(r => 
       r.title.toLowerCase().includes(q) || 
-      r.description.toLowerCase().includes(q)
+      r.description.toLowerCase().includes(q) ||
+      (r.contact_type === 'email' && q.includes('email')) ||
+      (r.contact_type === 'epic_id' && q.includes('epic')) ||
+      (r.contact_type === 'warframe_ign' && q.includes('warframe'))
     );
   }
 
