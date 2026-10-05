@@ -103,6 +103,7 @@
 }
 .input-wrapper input:focus { outline: none; border-color: var(--coral); }
 .input-wrapper input:disabled { opacity: .6; cursor: not-allowed; border-style: dashed; }
+.epic-warning { color: var(--coral); font-size: .72rem; margin-top: 6px; display: block; font-weight: 700; }
 
 .action-bar { align-items: center; display: flex; gap: 16px; margin-top: 40px; }
 .save-btn { 
