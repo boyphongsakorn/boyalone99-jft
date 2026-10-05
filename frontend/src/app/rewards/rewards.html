@@ -67,13 +67,13 @@
             <p>{{ reward.description }}</p>
             <div class="contact-warnings">
               @if (missingEmail(reward)) {
-                <span class="warning-badge email">⚠ ต้องการ Email</span>
+                <span class="warning-badge email">⚠ ต้องการ Email <a routerLink="/profile">เพิ่มในโปรไฟล์ &#8599;</a></span>
               }
               @if (missingEpic(reward)) {
-                <span class="warning-badge epic">⚠ ต้องการ Epic ID (ชื่อในเกม Fortnite)</span>
+                <span class="warning-badge epic">⚠ ต้องการ Epic ID <a routerLink="/profile">เพิ่มในโปรไฟล์ &#8599;</a></span>
               }
               @if (missingWarframe(reward)) {
-                <span class="warning-badge epic">⚠ ต้องการ Warframe IGN (ชื่อในเกม)</span>
+                <span class="warning-badge epic">⚠ ต้องการ Warframe IGN <a routerLink="/profile">เพิ่มในโปรไฟล์ &#8599;</a></span>
               }
               @if (reward.one_per_user === 1 || reward.one_per_user === true) {
                 <span class="warning-badge epic">1 ครั้งต่อคน</span>
