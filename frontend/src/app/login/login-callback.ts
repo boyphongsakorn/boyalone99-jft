@@ -25,23 +25,23 @@ interface DiscordUser {
         @if (loading()) {
           <div class="loading-state">
             <div class="spinner"></div>
-            <p>Verifying your identity...</p>
+            <p>กำลังยืนยันตัวตน...</p>
           </div>
         } @else if (error()) {
           <div class="error-state">
             <span class="error-icon">✕</span>
-            <h2>Authentication Failed</h2>
+            <h2>ยืนยันตัวตนไม่สำเร็จ</h2>
             <p>{{ error() }}</p>
-            <a class="back-btn" routerLink="/login">Back to Login</a>
+            <a class="back-btn" routerLink="/login">กลับไปหน้าเข้าสู่ระบบ</a>
           </div>
         } @else if (user()) {
           <div class="welcome-state">
             <div class="user-avatar">
               <img [src]="userAvatar()" alt="{{ user()?.username }}">
             </div>
-            <h1>Welcome, {{ user()?.username }}!</h1>
-            <p>You are now connected to the BoyAlone99 Community.</p>
-            <a class="home-btn" routerLink="/">Enter Rewards Hub</a>
+            <h1>ยินดีต้อนรับ, {{ user()?.username }}!</h1>
+            <p>คุณเชื่อมต่อกับชุมชน BoyAlone99 แล้ว</p>
+            <a class="home-btn" routerLink="/">เข้าสู่หน้าของรางวัล</a>
           </div>
         }
       </section>
@@ -100,7 +100,7 @@ export class LoginCallback implements OnInit {
       } catch { /* ignore bad state */ }
     }
     if (!code) {
-      this.error.set('No authorization code received.');
+      this.error.set('ไม่พบรหัสยืนยัน');
       this.loading.set(false);
       return;
     }
@@ -159,7 +159,7 @@ export class LoginCallback implements OnInit {
         localStorage.setItem('user_profile', JSON.stringify({ ...user, provider: 'discord' }));
       }
     } catch (e) {
-      this.error.set(`Failed to authenticate with ${provider === 'twitch' ? 'Twitch' : 'Discord'}.`);
+      this.error.set(`ยืนยันตัวตนด้วย ${provider === 'twitch' ? 'Twitch' : 'Discord'} ไม่สำเร็จ`);
     } finally {
       this.loading.set(false);
     }
