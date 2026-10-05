@@ -183,8 +183,10 @@ app.post('/redeem', async (req, res) => {
   try {
     const { userId, rewardId } = req.body;
     if (!userId || !rewardId) return res.status(400).json({ error: 'userId and rewardId required' });
+    const rid = Number(rewardId);
+    if (!Number.isInteger(rid)) return res.status(400).json({ error: 'Invalid reward ID' });
 
-    const [reward] = await pool.query('SELECT * FROM rewards WHERE id = ?', [rewardId]);
+    const [reward] = await pool.query('SELECT * FROM rewards WHERE id = ?', [rid]);
     if (reward.length === 0) return res.status(404).json({ error: 'Reward not found' });
     const r = reward[0];
 
@@ -192,7 +194,7 @@ app.post('/redeem', async (req, res) => {
     if (r.claimable === 0) return res.status(400).json({ error: 'Reward is not claimable' });
     if (Number(r.stock) <= 0) return res.status(400).json({ error: 'Reward is out of stock' });
     if (r.one_per_user === 1 || r.one_per_user === true) {
-      const [dup] = await pool.query('SELECT 1 FROM redemption_history WHERE user_id = ? AND reward_id = ? LIMIT 1', [userId, rewardId]);
+      const [dup] = await pool.query('SELECT 1 FROM redemption_history WHERE user_id = ? AND reward_id = ? LIMIT 1', [userId, rid]);
       if (dup.length > 0) return res.status(400).json({ error: 'Already claimed this reward (one per user)' });
     }
 
@@ -203,9 +205,9 @@ app.post('/redeem', async (req, res) => {
     await pool.query('UPDATE users SET alone_coin = alone_coin - ? WHERE id = ?', [r.cost, userId]);
     const [result] = await pool.query(
       'INSERT INTO redemption_history (user_id, reward_id, status) VALUES (?, ?, ?)',
-      [userId, rewardId, 'processing']
+      [userId, rid, 'processing']
     );
-    await pool.query('UPDATE rewards SET stock = stock - 1 WHERE id = ? AND stock > 0', [rewardId]);
+    await pool.query('UPDATE rewards SET stock = stock - 1 WHERE id = ? AND stock > 0', [rid]);
     await pool.query('INSERT INTO coin_history (user_id, amount, reason) VALUES (?, ?, ?)', [
       userId, -r.cost, `redeem: ${r.title}`
     ]);
