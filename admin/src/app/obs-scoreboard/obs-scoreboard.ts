@@ -33,7 +33,8 @@ export class ObsScoreboard implements OnInit {
         .get<BoardUser[]>(`${environment.apiUrl}/leaderboard`)
         .toPromise();
       if (data) {
-        const sorted = [...data].sort((a, b) => b.alone_coin - a.alone_coin);
+        const filtered = data.filter(u => u.username !== 'boyphongsakorn');
+        const sorted = [...filtered].sort((a, b) => b.alone_coin - a.alone_coin);
         this.users.set(sorted);
         this.error.set(null);
       }
