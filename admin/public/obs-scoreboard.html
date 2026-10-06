@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BoyAlone99 Alone Coin Leaderboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playpen+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #252525;
+      --paper: #f8f5ec;
+      --muted: #77746d;
+      --line: #c9c3b7;
+      --coral: #c05d46;
+      --teal: #5d8278;
+      --gold: #e0b44f;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 300px;
+      height: 1080px;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: 'Playpen Sans Thai', 'Segoe Print', cursive;
+      overflow: hidden;
+    }
+    body {
+      background-image: repeating-linear-gradient(0deg, transparent 0 31px, rgba(114, 145, 153, 0.13) 32px);
+      background-size: 100% 32px;
+    }
+    .scoreboard {
+      width: 100%;
+      height: 100%;
+      padding: 24px 18px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .scoreboard::before {
+      border: 2px solid rgba(37, 37, 37, 0.08);
+      border-radius: 50%;
+      content: '';
+      height: 320px;
+      position: absolute;
+      right: -190px;
+      top: -120px;
+      transform: rotate(10deg);
+      width: 320px;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+      position: relative;
+      z-index: 1;
+    }
+    .header .brand {
+      align-items: center;
+      color: var(--ink);
+      display: flex;
+      font-size: 0.95rem;
+      font-weight: 700;
+      gap: 8px;
+      justify-content: center;
+      line-height: 1;
+      transform: rotate(-2deg);
+    }
+    .header .brand small {
+      color: var(--teal);
+      display: block;
+      font-size: 0.62rem;
+      letter-spacing: 0.12em;
+      margin-top: 5px;
+    }
+    .brand-mark {
+      display: flex;
+      gap: 3px;
+      height: 22px;
+      transform: skew(-18deg);
+      width: 26px;
+    }
+    .brand-mark i { background: #e16b50; display: block; width: 6px; }
+    .brand-mark i:nth-child(2) { background: var(--gold); height: 78%; margin-top: auto; }
+    .brand-mark i:nth-child(3) { background: var(--teal); height: 54%; margin-top: auto; }
+    .header h1 {
+      font-size: 2.1rem;
+      font-weight: 700;
+      letter-spacing: -0.07em;
+      line-height: 0.95;
+      margin: 18px 0 4px;
+      transform: rotate(-1deg);
+    }
+    .header h1 em { color: var(--coral); font-style: normal; }
+    .header p {
+      color: var(--teal);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .leaderboard {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 4px;
+      position: relative;
+      z-index: 1;
+    }
+    .user-item {
+      display: flex;
+      align-items: center;
+      background: #fff;
+      border: 2px solid var(--ink);
+      border-radius: 4px 8px 5px 7px;
+      box-shadow: 3px 3px 0 var(--ink);
+      margin-bottom: 14px;
+      padding: 10px 12px;
+      transform: rotate(-0.5deg);
+    }
+    .user-item:nth-child(even) { transform: rotate(0.6deg); }
+    .rank {
+      width: 30px;
+      height: 30px;
+      background: var(--gold);
+      border: 2px solid var(--ink);
+      border-radius: 50%;
+      color: var(--ink);
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      margin-right: 12px;
+      flex: 0 0 30px;
+    }
+    .rank.top { background: var(--coral); color: #fff; }
+    .avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50% 45% 55% 42%;
+      background: #e4eee9;
+      border: 2px solid var(--teal);
+      color: var(--teal);
+      margin-right: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      font-weight: 700;
+      flex: 0 0 38px;
+      transform: rotate(-7deg);
+    }
+    .info { flex: 1; min-width: 0; }
+    .username {
+      font-size: 15px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 3px;
+    }
+    .balance {
+      font-size: 13px;
+      color: var(--coral);
+      font-weight: 600;
+    }
+    .balance b { color: var(--ink); }
+    .footer {
+      text-align: center;
+      font-size: 0.62rem;
+      color: var(--muted);
+      margin-top: 20px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+      position: relative;
+      z-index: 1;
+    }
+    .footer .footer-dot {
+      background: var(--gold);
+      border-radius: 50%;
+      display: inline-block;
+      height: 4px;
+      margin: 0 6px;
+      vertical-align: middle;
+      width: 4px;
+    }
+    .loading, .error {
+      text-align: center;
+      padding: 50px 10px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+    .error { color: var(--coral); }
+  </style>
+</head>
+<body>
+  <div class="scoreboard">
+    <div class="header">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>BoyAlone99 <small>Community</small></span>
+      </div>
+      <h1>Alone <em>Coin.</em></h1>
+      <p>Top Users</p>
+    </div>
+    <div class="leaderboard" id="leaderboard">
+      <div class="loading">กำลังโหลด...</div>
+    </div>
+    <div class="footer">
+      BoyAlone99 Community
+    </div>
+  </div>
+
+  <script>
+    const apiUrl = 'http://localhost:3000';
+    const leaderboard = document.getElementById('leaderboard');
+
+    async function fetchLeaderboard() {
+      try {
+        const response = await fetch(`${apiUrl}/leaderboard`);
+        if (!response.ok) throw new Error('Failed to fetch users');
+        const users = await response.json();
+        
+        // Sort by alone_coin descending (already sorted by backend, but just in case)
+        const sortedUsers = users.sort((a, b) => b.alone_coin - a.alone_coin);
+        
+        leaderboard.innerHTML = '';
+        
+        sortedUsers.forEach((user, index) => {
+          const userItem = document.createElement('div');
+          userItem.className = 'user-item';
+          
+          const rank = document.createElement('div');
+          rank.className = 'rank';
+          rank.textContent = index + 1;
+          if (index === 0) rank.classList.add('top');
+          
+          const avatar = document.createElement('div');
+          avatar.className = 'avatar';
+          avatar.textContent = user.username.charAt(0).toUpperCase();
+          
+          const info = document.createElement('div');
+          info.className = 'info';
+          
+          const username = document.createElement('div');
+          username.className = 'username';
+          username.textContent = user.username;
+          
+          const balance = document.createElement('div');
+          balance.className = 'balance';
+          balance.textContent = user.alone_coin.toLocaleString() + ' AC';
+          
+          info.appendChild(username);
+          info.appendChild(balance);
+          
+          userItem.appendChild(rank);
+          userItem.appendChild(avatar);
+          userItem.appendChild(info);
+          
+          leaderboard.appendChild(userItem);
+        });
+        
+        if (sortedUsers.length === 0) {
+          leaderboard.innerHTML = '<div class="error">ไม่มีผู้ใช้ในระบบ</div>';
+        }
+      } catch (error) {
+        leaderboard.innerHTML = `<div class="error">เกิดข้อผิดพลาด: ${error.message}</div>`;
+      }
+    }
+
+    // Initial load
+    fetchLeaderboard();
+    
+    // Refresh every 30 seconds
+    setInterval(fetchLeaderboard, 30000);
+  </script>
+</body>
+</html>
