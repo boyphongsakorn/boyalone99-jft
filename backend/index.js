@@ -856,18 +856,38 @@ app.get('/follow/twitchsub', async (req, res) => {
   }
 });
 
-// Check YouTube sub — API key cannot verify viewer, return link + claimed state
-// GET /follow/youtube?userId=<main id>
+// Check YouTube sub — Verify if user is subscribed to boyalone99 using YouTube Data API v3
+// GET /follow/youtube?userId=<main id>&accessToken=<google oauth token>
 app.get('/follow/youtube', async (req, res) => {
   try {
     const channelUrl = process.env.YOUTUBE_CHANNEL_URL || (process.env.YOUTUBE_CHANNEL_ID ? `https://www.youtube.com/channel/${process.env.YOUTUBE_CHANNEL_ID}?sub_confirmation=1` : 'https://youtube.com/@BoyAlone99Gaming?sub_confirmation=1');
+    const targetChannelId = process.env.YOUTUBE_CHANNEL_ID || null;
     const userId = req.query.userId ? String(req.query.userId) : null;
+    const accessToken = req.query.accessToken ? String(req.query.accessToken) : null;
     let claimed = false;
     if (userId) {
       const [rows] = await pool.query('SELECT 1 FROM claimed_follows WHERE user_id = ? AND platform = ?', [userId, 'youtube']);
       claimed = rows.length > 0;
     }
-    res.json({ following: null, reason: 'manual_check_required', channelUrl, claimed });
+    // If we have a user access token with youtube.readonly scope + target channel ID,
+    // verify subscription via subscriptions.list?mine=true&forChannelId=...
+    if (accessToken && targetChannelId) {
+      try {
+        const subRes = await axios.get('https://www.googleapis.com/youtube/v3/subscriptions', {
+          params: { part: 'snippet', mine: 'true', forChannelId: targetChannelId },
+          headers: { Authorization: `Bearer ${accessToken}` },
+          timeout: 8000,
+        });
+        const items = subRes.data?.items || [];
+        const subscribed = items.length > 0;
+        return res.json({ following: subscribed, subscribed, channelUrl, claimed });
+      } catch (e) {
+        // Token expired/invalid or quota issue — fall through to manual check
+        console.error('YouTube Sub Check Error:', e.response?.data || e.message);
+        return res.json({ following: null, reason: 'token_invalid', channelUrl, claimed });
+      }
+    }
+    res.json({ following: null, reason: 'manual_check_required', channelUrl, claimed, needsToken: !accessToken, needsChannelId: !targetChannelId });
   } catch (error) {
     res.status(500).json({ error: 'Failed to check YouTube subscription' });
   }
@@ -974,6 +994,29 @@ app.post('/claim/follow', async (req, res) => {
       }
       const need = platform === 'booster' ? boosterRole : lfgRole;
       if (!roles.includes(need)) return res.status(400).json({ error: platform === 'booster' ? 'Server Booster role not found' : 'LFG role not found' });
+    }
+    if (platform === 'youtube') {
+      // Verify subscription if caller provides a Google access token with youtube.readonly scope.
+      // Body: { userId, platform: 'youtube', accessToken? }
+      const accessToken = req.body?.accessToken ? String(req.body.accessToken) : null;
+      const targetChannelId = process.env.YOUTUBE_CHANNEL_ID || null;
+      if (accessToken && targetChannelId) {
+        try {
+          const subRes = await axios.get('https://www.googleapis.com/youtube/v3/subscriptions', {
+            params: { part: 'snippet', mine: 'true', forChannelId: targetChannelId },
+            headers: { Authorization: `Bearer ${accessToken}` },
+            timeout: 8000,
+          });
+          const subscribed = (subRes.data?.items || []).length > 0;
+          if (!subscribed) return res.status(400).json({ error: 'YouTube subscription not found — subscribe first' });
+        } catch (e) {
+          console.error('YouTube Claim Check Error:', e.response?.data || e.message);
+          return res.status(400).json({ error: 'Could not verify YouTube subscription — re-login with YouTube and try again' });
+        }
+      } else {
+        // No token available — manual flow (user clicked subscribe link). Log for audit.
+        console.log(`YouTube claim (manual) by user: ${userId}`);
+      }
     }
     await pool.query('UPDATE users SET alone_coin = alone_coin + ? WHERE id = ?', [amount, userId]);
     await pool.query('INSERT INTO claimed_follows (user_id, platform) VALUES (?, ?)', [userId, claimPlatform]);

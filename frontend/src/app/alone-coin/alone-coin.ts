@@ -18,6 +18,7 @@ export class AloneCoin implements OnInit {
   protected readonly twitchUrl = signal('https://www.twitch.tv/boyalone99');
   protected readonly twitchChatUrl = signal('https://www.twitch.tv/popout/boyalone99/chat?popout=');
   protected readonly youtubeUrl = signal('https://youtube.com/@BoyAlone99Gaming?sub_confirmation=1');
+  protected readonly youtubeSubscribed = signal<boolean | null>(null);
   protected readonly twitchClaimed = signal(false);
   protected readonly youtubeClaimed = signal(false);
   protected readonly hasBooster = signal<boolean | null>(null);
@@ -63,6 +64,27 @@ export class AloneCoin implements OnInit {
     return this.refreshStatus();
   }
 
+  private getGoogleToken(): string | null {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('google_access_token');
+  }
+
+  protected async checkYoutube(): Promise<void> {
+    const id = this.userId();
+    if (!id) return;
+    this.checking.set(true);
+    try {
+      const token = this.getGoogleToken();
+      const q = `userId=${encodeURIComponent(id)}${token ? `&accessToken=${encodeURIComponent(token)}` : ''}`;
+      const yt: any = await this.http.get(`${environment.apiUrl}/follow/youtube?${q}`).toPromise();
+      if (yt?.channelUrl) this.youtubeUrl.set(yt.channelUrl);
+      this.youtubeSubscribed.set(yt?.subscribed === true ? true : (yt?.subscribed === false ? false : null));
+      if (yt?.claimed) this.youtubeClaimed.set(true);
+    } catch { /* keep defaults */ } finally {
+      this.checking.set(false);
+    }
+  }
+
   private async refreshStatus(): Promise<void> {
     const id = this.userId();
     if (!id) return;
@@ -70,7 +92,7 @@ export class AloneCoin implements OnInit {
     try {
       const [tw, yt, roles, cp, sub]: any[] = await Promise.all([
         this.http.get(`${environment.apiUrl}/follow/twitch?userId=${encodeURIComponent(id)}`).toPromise(),
-        this.http.get(`${environment.apiUrl}/follow/youtube?userId=${encodeURIComponent(id)}`).toPromise(),
+        this.http.get(`${environment.apiUrl}/follow/youtube?userId=${encodeURIComponent(id)}${this.getGoogleToken() ? `&accessToken=${encodeURIComponent(this.getGoogleToken()!)}` : ''}`).toPromise(),
         this.http.get(`${environment.apiUrl}/discord/roles?userId=${encodeURIComponent(id)}`).toPromise().catch(() => null),
         this.http.get(`${environment.apiUrl}/twitch/channel-points?userId=${encodeURIComponent(id)}`).toPromise().catch(() => null),
         this.http.get(`${environment.apiUrl}/follow/twitchsub?userId=${encodeURIComponent(id)}`).toPromise().catch(() => null),
@@ -86,6 +108,7 @@ export class AloneCoin implements OnInit {
       }
       if (tw?.claimed) this.twitchClaimed.set(true);
       if (yt?.claimed) this.youtubeClaimed.set(true);
+      this.youtubeSubscribed.set(yt?.subscribed === true ? true : (yt?.subscribed === false ? false : null));
       if (roles) {
         this.hasBooster.set(roles.booster === true);
         this.hasLfg.set(roles.lfg === true);
@@ -143,6 +166,10 @@ export class AloneCoin implements OnInit {
     }
     try {
       const body: any = { userId: id, platform };
+      if (platform === 'youtube') {
+        const token = this.getGoogleToken();
+        if (token) body.accessToken = token;
+      }
       const res: any = await this.http
         .post(`${environment.apiUrl}/claim/follow`, body)
         .toPromise();
