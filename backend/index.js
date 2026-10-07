@@ -996,26 +996,23 @@ app.post('/claim/follow', async (req, res) => {
       if (!roles.includes(need)) return res.status(400).json({ error: platform === 'booster' ? 'Server Booster role not found' : 'LFG role not found' });
     }
     if (platform === 'youtube') {
-      // Verify subscription if caller provides a Google access token with youtube.readonly scope.
-      // Body: { userId, platform: 'youtube', accessToken? }
+      // Strict: require Google access token with youtube.readonly scope.
+      // Body: { userId, platform: 'youtube', accessToken }
       const accessToken = req.body?.accessToken ? String(req.body.accessToken) : null;
       const targetChannelId = process.env.YOUTUBE_CHANNEL_ID || null;
-      if (accessToken && targetChannelId) {
-        try {
-          const subRes = await axios.get('https://www.googleapis.com/youtube/v3/subscriptions', {
-            params: { part: 'snippet', mine: 'true', forChannelId: targetChannelId },
-            headers: { Authorization: `Bearer ${accessToken}` },
-            timeout: 8000,
-          });
-          const subscribed = (subRes.data?.items || []).length > 0;
-          if (!subscribed) return res.status(400).json({ error: 'YouTube subscription not found — subscribe first' });
-        } catch (e) {
-          console.error('YouTube Claim Check Error:', e.response?.data || e.message);
-          return res.status(400).json({ error: 'Could not verify YouTube subscription — re-login with YouTube and try again' });
-        }
-      } else {
-        // No token available — manual flow (user clicked subscribe link). Log for audit.
-        console.log(`YouTube claim (manual) by user: ${userId}`);
+      if (!accessToken) return res.status(400).json({ error: 'กรุณาล็อกอินด้วย YouTube/Google ใหม่เพื่อยืนยันการติดตาม' });
+      if (!targetChannelId) return res.status(500).json({ error: 'YOUTUBE_CHANNEL_ID not configured' });
+      try {
+        const subRes = await axios.get('https://www.googleapis.com/youtube/v3/subscriptions', {
+          params: { part: 'snippet', mine: 'true', forChannelId: targetChannelId },
+          headers: { Authorization: `Bearer ${accessToken}` },
+          timeout: 8000,
+        });
+        const subscribed = (subRes.data?.items || []).length > 0;
+        if (!subscribed) return res.status(400).json({ error: 'YouTube subscription not found — subscribe first' });
+      } catch (e) {
+        console.error('YouTube Claim Check Error:', e.response?.data || e.message);
+        return res.status(400).json({ error: 'Could not verify YouTube subscription — re-login with YouTube and try again' });
       }
     }
     await pool.query('UPDATE users SET alone_coin = alone_coin + ? WHERE id = ?', [amount, userId]);
@@ -1132,6 +1129,7 @@ app.get('/auth/google/callback', async (req, res) => {
       avatar: googleUser.picture,
       id: userId,
       email: dbRows[0]?.email ?? googleUser.email ?? null,
+      accessToken,
     });
   } catch (error) {
     console.error('Google Auth Error:', error.response?.data || error.message);

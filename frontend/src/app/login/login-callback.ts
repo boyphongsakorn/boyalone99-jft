@@ -147,7 +147,7 @@ export class LoginCallback implements OnInit {
         localStorage.setItem('user_profile', JSON.stringify(user));
       } else if (provider === 'youtube' || provider === 'google') {
         // Google/YouTube login
-        const userData = await this.http.get<DiscordUser>(
+        const userData: any = await this.http.get(
           `${environment.apiUrl}/auth/google/callback?code=${code}`
         ).toPromise();
 
@@ -155,6 +155,15 @@ export class LoginCallback implements OnInit {
         this.user.set(user);
         this.userAvatar.set(user.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png');
 
+        if (typeof window !== 'undefined') {
+          // Persist Google access token for YouTube Data API verification (subscriptions.list)
+          if (userData?.accessToken) {
+            try { localStorage.setItem('google_access_token', String(userData.accessToken)); } catch { /* ignore */ }
+          }
+          if (userData?.username) {
+            try { localStorage.setItem('linked_youtube', String(userData.username)); } catch { /* ignore */ }
+          }
+        }
         localStorage.setItem('user_profile', JSON.stringify({ ...user, provider: 'google' }));
       } else {
         // Call the real backend API to exchange the code for a user profile

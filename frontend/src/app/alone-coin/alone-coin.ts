@@ -168,7 +168,11 @@ export class AloneCoin implements OnInit {
       const body: any = { userId: id, platform };
       if (platform === 'youtube') {
         const token = this.getGoogleToken();
-        if (token) body.accessToken = token;
+        if (!token) {
+          this.notice.set('ต่องล็อกอินด้วย YouTube/Google ใหม่กอน (สิทธิ์ youtube.readonly) เพื่อยืนยันทิดตาม');
+          return;
+        }
+        body.accessToken = token;
       }
       const res: any = await this.http
         .post(`${environment.apiUrl}/claim/follow`, body)
