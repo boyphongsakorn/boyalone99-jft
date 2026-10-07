@@ -1008,7 +1008,44 @@ app.delete('/auth/twitch/link', async (req, res) => {
 
 // OAuth Callback Handler
 app.get('/auth/discord/callback', async (req, res) => {
-// ... existing discord code ...
+  const code = req.query.code;
+  if (!code) return res.status(400).json({ error: 'Missing code' });
+
+  try {
+    const tokenResponse = await axios.post('https://discord.com/api/oauth2/token', new URLSearchParams({
+      client_id: process.env.DISCORD_CLIENT_ID,
+      client_secret: process.env.DISCORD_CLIENT_SECRET,
+      code: code,
+      grant_type: 'authorization_code',
+      redirect_uri: process.env.REDIRECT_URI || 'https://neon-granita-d423fd.netlify.app/login/callback',
+    }), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+
+    const accessToken = tokenResponse.data.access_token;
+    const userResponse = await axios.get('https://discord.com/api/users/@me', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    const discordUser = userResponse.data;
+    const userId = `discord:${discordUser.id}`;
+
+    await pool.query(
+      `INSERT INTO users (id, username, email, avatar, alone_coin)
+       VALUES (?, ?, ?, ?, 0)
+       ON DUPLICATE KEY UPDATE username = VALUES(username), avatar = VALUES(avatar)`,
+      [userId, discordUser.username, discordUser.email || null, discordUser.avatar || null]
+    );
+    const [dbRows] = await pool.query('SELECT email FROM users WHERE id = ?', [userId]);
+
+    res.json({
+      username: discordUser.username,
+      avatar: discordUser.avatar,
+      id: userId,
+      email: dbRows[0]?.email ?? discordUser.email ?? null,
+    });
+  } catch (error) {
+    console.error('Discord Auth Error:', error.response?.data || error.message);
+    res.status(500).json({ error: 'Authentication failed' });
+  }
 });
 
 // Google/YouTube Callback Handler
