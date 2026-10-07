@@ -1009,7 +1009,7 @@ app.delete('/auth/twitch/link', async (req, res) => {
 // OAuth Callback Handler
 app.get('/auth/discord/callback', async (req, res) => {
 // ... existing discord code ...
-}, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+});
 
 // Google/YouTube Callback Handler
 app.get('/auth/google/callback', async (req, res) => {
@@ -1052,8 +1052,6 @@ app.get('/auth/google/callback', async (req, res) => {
     res.status(500).json({ error: 'Authentication failed' });
   }
 });
-
-// OAuth Callback Handler
 
 // Twitch Channel Points — detect custom reward redemptions and convert to Alone Coin
 // Setup: TWITCH_BROADCASTER_ID + tokens from twitchtokengenerator.com saved as
