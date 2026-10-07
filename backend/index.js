@@ -1029,29 +1029,23 @@ app.get('/auth/discord/callback', async (req, res) => {
     const rawId = discordUser.id;
     const userId = rawId.startsWith('discord:') ? rawId : `discord:${rawId}`;
 
-    // Support migration: if the user exists with the raw ID, we should migrate them to 'discord:ID'
-    // but to keep it simple and avoid duplicates, we check if rawId exists first.
+    // Support migration: if the user exists with the raw ID, we use that as the primary key
+    // to avoid foreign key constraint failures during ID updates.
     const [existing] = await pool.query('SELECT id FROM users WHERE id = ?', [rawId]);
-    if (existing.length > 0) {
-      const oldId = existing[0].id;
-      await pool.query(
-        `UPDATE users SET id = ? WHERE id = ?`,
-        [userId, oldId]
-      );
-    }
+    const finalUserId = existing.length > 0 ? existing[0].id : userId;
 
     await pool.query(
       `INSERT INTO users (id, username, email, avatar, alone_coin)
        VALUES (?, ?, ?, ?, 0)
        ON DUPLICATE KEY UPDATE username = VALUES(username), avatar = VALUES(avatar)`,
-      [userId, discordUser.username, discordUser.email || null, discordUser.avatar || null]
+      [finalUserId, discordUser.username, discordUser.email || null, discordUser.avatar || null]
     );
-    const [dbRows] = await pool.query('SELECT email FROM users WHERE id = ?', [userId]);
+    const [dbRows] = await pool.query('SELECT email FROM users WHERE id = ?', [finalUserId]);
 
     res.json({
       username: discordUser.username,
       avatar: discordUser.avatar,
-      id: userId,
+      id: finalUserId,
       email: dbRows[0]?.email ?? discordUser.email ?? null,
     });
   } catch (error) {
