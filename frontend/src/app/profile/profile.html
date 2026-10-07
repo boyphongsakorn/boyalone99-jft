@@ -139,7 +139,9 @@
             }
           </span>
           @if (linkedTwitch()) {
-            <button type="button" class="unlink" (click)="unlinkSocial('twitch')">ยกเลิกการเชื่อมต่อ</button>
+            @if (mainProvider() !== 'twitch') {
+              <button type="button" class="unlink" (click)="unlinkSocial('twitch')">ยกเลิกการเชื่อมต่อ</button>
+            }
           } @else {
             <button type="button" (click)="linkSocial('Twitch')">เชื่อมต่อ</button>
           }
@@ -155,7 +157,9 @@
             }
           </span>
           @if (linkedYoutube()) {
-            <button type="button" class="unlink" (click)="unlinkSocial('youtube')">ยกเลิกการเชื่อมต่อ</button>
+            @if (mainProvider() !== 'youtube') {
+              <button type="button" class="unlink" (click)="unlinkSocial('youtube')">ยกเลิกการเชื่อมต่อ</button>
+            }
           } @else {
             <button type="button" (click)="linkSocial('YouTube')">เชื่อมต่อ</button>
           }

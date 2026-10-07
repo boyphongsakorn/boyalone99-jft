@@ -29,6 +29,7 @@ export class Profile implements OnInit {
   protected linkedDiscord = signal<string | null>(null);
   protected linkedTwitch = signal<string | null>(null);
   protected linkedYoutube = signal<string | null>(null);
+  protected mainProvider = signal<string | null>(null);
 
   constructor(private http: HttpClient, private router: Router) {}
 
@@ -46,6 +47,8 @@ export class Profile implements OnInit {
       try {
         const parsed = JSON.parse(savedUser);
         userId = parsed.id || null;
+        const rawProvider = (parsed.provider || '').toLowerCase();
+        this.mainProvider.set(rawProvider === 'google' ? 'youtube' : (rawProvider || null));
         this.email.set(parsed.email || '');
         if (parsed.avatarUrl) {
           this.userAvatar.set(parsed.avatarUrl);
