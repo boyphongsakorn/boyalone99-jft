@@ -84,8 +84,6 @@
           } @else if (youtubeSubscribed() === true && isLoggedIn() && !youtubeClaimed()) {
             <p class="claim-hint">✓ พบการซับแล้ว — กดรับได้เลย</p>
           }
-            }
-          </div>
           @if (!twitchLinked() && isLoggedIn()) {
             <p class="claim-hint">ยังไม่ได้เชื่อม Twitch — ไปที่ <a routerLink="/profile">โปรไฟล์ → Link Twitch</a> ก่อน แล้วกดรับอีกครั้ง</p>
           }
