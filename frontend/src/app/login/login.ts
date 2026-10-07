@@ -29,7 +29,7 @@ export class Login {
       YouTube: {
         clientId: environment.youtubeClientId,
         endpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
-        scope: 'openid email profile',
+        scope: 'openid email profile https://www.googleapis.com/auth/youtube.readonly',
       },
     } as const;
     const settings = providerSettings[provider as keyof typeof providerSettings];

@@ -145,6 +145,17 @@ export class LoginCallback implements OnInit {
         this.user.set(user);
         this.userAvatar.set(twitchData.avatarUrl || 'https://cdn.discordapp.com/embed/avatars/0.png');
         localStorage.setItem('user_profile', JSON.stringify(user));
+      } else if (provider === 'youtube' || provider === 'google') {
+        // Google/YouTube login
+        const userData = await this.http.get<DiscordUser>(
+          `${environment.apiUrl}/auth/google/callback?code=${code}`
+        ).toPromise();
+
+        const user = userData as DiscordUser;
+        this.user.set(user);
+        this.userAvatar.set(user.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png');
+
+        localStorage.setItem('user_profile', JSON.stringify({ ...user, provider: 'google' }));
       } else {
         // Call the real backend API to exchange the code for a user profile
         const userData = await this.http.get<DiscordUser>(
@@ -159,7 +170,7 @@ export class LoginCallback implements OnInit {
         localStorage.setItem('user_profile', JSON.stringify({ ...user, provider: 'discord' }));
       }
     } catch (e) {
-      this.error.set(`ยืนยันตัวตนด้วย ${provider === 'twitch' ? 'Twitch' : 'Discord'} ไม่สำเร็จ`);
+      this.error.set(`ยืนยันตัวตนด้วย ${provider === 'twitch' ? 'Twitch' : provider === 'google' || provider === 'youtube' ? 'Google' : 'Discord'} ไม่สำเร็จ`);
     } finally {
       this.loading.set(false);
     }

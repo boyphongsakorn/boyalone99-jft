@@ -1008,49 +1008,52 @@ app.delete('/auth/twitch/link', async (req, res) => {
 
 // OAuth Callback Handler
 app.get('/auth/discord/callback', async (req, res) => {
+// ... existing discord code ...
+}, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+
+// Google/YouTube Callback Handler
+app.get('/auth/google/callback', async (req, res) => {
   const code = req.query.code;
   if (!code) return res.status(400).json({ error: 'Missing code' });
 
   try {
-    // 1. Exchange code for access token
-    const tokenResponse = await axios.post('https://discord.com/api/oauth2/token', new URLSearchParams({
-      client_id: process.env.DISCORD_CLIENT_ID,
-      client_secret: process.env.DISCORD_CLIENT_SECRET,
+    const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', new URLSearchParams({
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET,
       code: code,
       grant_type: 'authorization_code',
       redirect_uri: process.env.REDIRECT_URI || 'https://neon-granita-d423fd.netlify.app/login/callback',
     }), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
 
     const accessToken = tokenResponse.data.access_token;
-
-    // 2. Fetch user profile from Discord using the token
-    const userResponse = await axios.get('https://discord.com/api/users/@me', {
+    const userResponse = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
-    const discordUser = userResponse.data;
+    const googleUser = userResponse.data;
+    const userId = `google:${googleUser.sub}`;
 
-    // 3. Save/Update user in MySQL — never overwrite email on login
     await pool.query(
       `INSERT INTO users (id, username, email, avatar, alone_coin)
        VALUES (?, ?, ?, ?, 0)
        ON DUPLICATE KEY UPDATE username = VALUES(username), avatar = VALUES(avatar)`,
-      [discordUser.id, discordUser.username, discordUser.email || null, discordUser.avatar || null]
+      [userId, googleUser.name, googleUser.email || null, googleUser.picture || null]
     );
-    const [dbRows] = await pool.query('SELECT email FROM users WHERE id = ?', [discordUser.id]);
+    const [dbRows] = await pool.query('SELECT email FROM users WHERE id = ?', [userId]);
 
-    // 4. Send profile back to frontend
     res.json({
-      username: discordUser.username,
-      avatar: discordUser.avatar,
-      id: discordUser.id,
-      email: dbRows[0]?.email ?? discordUser.email ?? null,
+      username: googleUser.name,
+      avatar: googleUser.picture,
+      id: userId,
+      email: dbRows[0]?.email ?? googleUser.email ?? null,
     });
   } catch (error) {
-    console.error('Discord Auth Error:', error.response?.data || error.message);
+    console.error('Google Auth Error:', error.response?.data || error.message);
     res.status(500).json({ error: 'Authentication failed' });
   }
 });
+
+// OAuth Callback Handler
 
 // Twitch Channel Points — detect custom reward redemptions and convert to Alone Coin
 // Setup: TWITCH_BROADCASTER_ID + tokens from twitchtokengenerator.com saved as
