@@ -56,7 +56,7 @@ export class Profile implements OnInit {
           this.linkedDiscord.set(parsed.username || 'Linked');
         } else if (parsed.provider === 'twitch') {
           this.linkedTwitch.set(parsed.twitch_username || parsed.username || 'Linked');
-        } else if (parsed.provider === 'youtube') {
+        } else if (parsed.provider === 'google' || parsed.provider === 'youtube') {
           this.linkedYoutube.set(parsed.username || 'Linked');
         }
         if (parsed.linkedDiscord) this.linkedDiscord.set(parsed.linkedDiscord);
