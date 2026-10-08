@@ -10,6 +10,7 @@ import { History } from './history/history';
 import { RewardsProgress } from './rewards-progress/rewards-progress';
 import { TermsComponent } from './terms/terms';
 import { PrivacyComponent } from './privacy/privacy';
+import { Sso } from './sso/sso';
 
 export const routes: Routes = [
   { path: '', component: Rewards },
@@ -21,5 +22,6 @@ export const routes: Routes = [
   { path: 'alone-coin', component: AloneCoin },
   { path: 'login', component: Login, canActivate: [guestOnlyGuard] },
   { path: 'login/callback', component: LoginCallback },
+  { path: 'sso', component: Sso },
   { path: '**', redirectTo: '' },
 ];

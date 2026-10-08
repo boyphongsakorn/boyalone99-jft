@@ -91,17 +91,32 @@ export class LoginCallback implements OnInit {
     let isLink = params.get('link') === 'true';
     let linkUserId = params.get('linkUserId') || '';
     const stateRaw = params.get('state');
+    let ssoCtx: any = null;
     if (stateRaw) {
       try {
         const state = JSON.parse(atob(stateRaw));
         if (state.provider) provider = String(state.provider).toLowerCase();
         if (state.link === true) isLink = true;
         if (state.linkUserId) linkUserId = String(state.linkUserId);
+        if (state.sso === true) ssoCtx = state;
       } catch { /* ignore bad state */ }
     }
     if (!code) {
       this.error.set('ไม่พบรหัสยืนยัน');
       this.loading.set(false);
+      return;
+    }
+    // SSO mode: hand the code back to the /sso page which owns the exchange
+    // and the redirect back to the external site
+    if (ssoCtx) {
+      const qp: { [k: string]: string } = { code: code, provider };
+      const ssoRedirect = ssoCtx['redirect_uri'];
+      const ssoState = ssoCtx['ssoState'];
+      const ssoApp = ssoCtx['app'];
+      if (ssoRedirect) qp['redirect_uri'] = String(ssoRedirect);
+      if (ssoState) qp['state'] = String(ssoState);
+      if (ssoApp) qp['app'] = String(ssoApp);
+      this.router.navigate(['/sso'], { queryParams: qp });
       return;
     }
 
