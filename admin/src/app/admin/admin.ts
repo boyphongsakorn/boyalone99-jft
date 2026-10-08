@@ -25,6 +25,7 @@ interface AdminUser {
   email: string | null;
   avatar: string | null;
   alone_coin: number;
+  disabled?: number | boolean;
   created_at?: string;
 }
 
@@ -512,6 +513,22 @@ export class Admin implements OnInit {
   protected closeHistory(): void {
     this.historyUser.set(null);
     this.historyRows.set([]);
+  }
+
+  protected async toggleUserDisabled(user: AdminUser) {
+    const next = user.disabled ? 0 : 1;
+    const prev = user.disabled;
+    this.users.update((v) => v.map((u) => (u.id === user.id ? { ...u, disabled: next } : u)));
+    try {
+      const updated = await this.http
+        .put<AdminUser>(`${environment.apiUrl}/admin/users/${encodeURIComponent(user.id)}/disabled`, { disabled: next })
+        .toPromise();
+      if (updated) this.users.update((v) => v.map((u) => (u.id === user.id ? updated : u)));
+      this.notice.set(next ? `${user.username} disabled` : `${user.username} enabled`);
+    } catch (e) {
+      this.users.update((v) => v.map((u) => (u.id === user.id ? { ...u, disabled: prev } : u)));
+      this.notice.set('Toggle user failed');
+    }
   }
 
   protected async addCoins(user: AdminUser) {

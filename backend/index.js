@@ -41,6 +41,7 @@ const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || crypto.randomBytes(32).
   await backfill("ALTER TABLE rewards ADD COLUMN one_per_user TINYINT(1) NOT NULL DEFAULT 0");
   await backfill("ALTER TABLE rewards ADD COLUMN sort_order INT NOT NULL DEFAULT 0");
   await backfill("ALTER TABLE users ADD COLUMN warframe_ign VARCHAR(255) NULL");
+  await backfill("ALTER TABLE users ADD COLUMN disabled TINYINT(1) NOT NULL DEFAULT 0");
 })();
 
 // Middleware to check Admin Auth
@@ -198,8 +199,9 @@ app.post('/redeem', async (req, res) => {
       if (dup.length > 0) return res.status(400).json({ error: 'Already claimed this reward (one per user)' });
     }
 
-    const [user] = await pool.query('SELECT alone_coin FROM users WHERE id = ?', [userId]);
+    const [user] = await pool.query('SELECT alone_coin, disabled FROM users WHERE id = ?', [userId]);
     if (user.length === 0) return res.status(404).json({ error: 'User not found' });
+    if (user[0].disabled) return res.status(403).json({ error: 'Your account is currently disabled' });
     if (user[0].alone_coin < r.cost) return res.status(400).json({ error: 'Insufficient Alone Coin' });
 
     await pool.query('UPDATE users SET alone_coin = alone_coin - ? WHERE id = ?', [r.cost, userId]);
@@ -222,13 +224,35 @@ app.post('/redeem', async (req, res) => {
 // List all users
 app.get('/admin/users', checkAdminAuth, async (req, res) => {
   try {
+    await pool.query("ALTER TABLE users ADD COLUMN disabled TINYINT(1) NOT NULL DEFAULT 0").catch((e) => {
+      if (e.code !== 'ER_DUP_FIELDNAME') throw e;
+    });
     const [rows] = await pool.query(
-      'SELECT id, username, email, avatar, alone_coin, created_at FROM users ORDER BY created_at DESC'
+      'SELECT id, username, email, avatar, alone_coin, (disabled <> 0) AS disabled, created_at FROM users ORDER BY created_at DESC'
     );
     res.json(rows);
   } catch (error) {
     console.error('Database Error:', error);
     res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+// Enable/disable user
+app.put('/admin/users/:id/disabled', checkAdminAuth, async (req, res) => {
+  try {
+    await pool.query("ALTER TABLE users ADD COLUMN disabled TINYINT(1) NOT NULL DEFAULT 0").catch((e) => {
+      if (e.code !== 'ER_DUP_FIELDNAME') throw e;
+    });
+    const id = decodeURIComponent(req.params.id);
+    const { disabled } = req.body;
+    const flag = disabled === true || disabled === 1 || disabled === '1' ? 1 : 0;
+    await pool.query('UPDATE users SET disabled = ? WHERE id = ?', [flag, id]);
+    const [rows] = await pool.query('SELECT id, username, email, avatar, alone_coin, (disabled <> 0) AS disabled, created_at FROM users WHERE id = ?', [id]);
+    if (rows.length === 0) return res.status(404).json({ error: 'User not found' });
+    res.json(rows[0]);
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to update user' });
   }
 });
 
@@ -959,6 +983,8 @@ app.post('/claim/follow', async (req, res) => {
     }
     const [claimed] = await pool.query('SELECT 1 FROM claimed_follows WHERE user_id = ? AND platform = ?', [userId, claimPlatform]);
     if (claimed.length > 0) return res.status(400).json({ error: isSubMonth ? 'Already claimed this month — come back next month' : 'Already claimed' });
+    const [uCheck] = await pool.query('SELECT disabled FROM users WHERE id = ?', [userId]);
+    if (uCheck.length === 0 || uCheck[0].disabled) return res.status(403).json({ error: 'Your account is currently disabled' });
     if (platform === 'twitch' || platform === 'twitchsub') {
       const [users] = await pool.query('SELECT twitch_id FROM users WHERE id = ?', [userId]);
       if (users.length === 0 || !users[0].twitch_id) return res.status(400).json({ error: 'Twitch not linked' });
@@ -1347,8 +1373,10 @@ app.post('/claim/channel-points', async (req, res) => {
   try {
     const { userId } = req.body;
     if (!userId) return res.status(400).json({ error: 'userId required' });
-    const [users] = await pool.query('SELECT twitch_id FROM users WHERE id = ?', [userId]);
-    if (users.length === 0 || !users[0].twitch_id) return res.status(400).json({ error: 'Twitch not linked' });
+    const [users] = await pool.query('SELECT twitch_id, disabled FROM users WHERE id = ?', [userId]);
+    if (users.length === 0) return res.status(404).json({ error: 'User not found' });
+    if (users[0].disabled) return res.status(403).json({ error: 'Your account is currently disabled' });
+    if (!users[0].twitch_id) return res.status(400).json({ error: 'Twitch not linked' });
     const rewardId = process.env.TWITCH_CHANNEL_REWARD_ID;
     if (!rewardId) return res.status(500).json({ error: 'TWITCH_CHANNEL_REWARD_ID not configured' });
     const amount = Number(process.env.CHANNEL_POINTS_AC || 100);

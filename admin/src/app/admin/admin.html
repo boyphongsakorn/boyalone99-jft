@@ -131,13 +131,17 @@
       <h2>All users ({{ users().length }})</h2>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>User</th><th>Email</th><th>Alone Coin</th><th>Add coin</th><th>Sub reward</th></tr></thead>
+          <thead><tr><th>User</th><th>Email</th><th>Alone Coin</th><th>Status</th><th>Add coin</th><th>Sub reward</th></tr></thead>
           <tbody>
             @for (u of users(); track u.id) {
               <tr>
                 <td><b>{{ u.username }}</b><br /><small>{{ u.id }}</small></td>
                 <td>{{ u.email || '-' }}</td>
                 <td><button type="button" class="link-btn" (click)="openHistory(u)" [attr.aria-label]="'View coin history of ' + u.username"><b>{{ u.alone_coin }}</b> AC</button></td>
+                <td>
+                  <button type="button" role="switch" [attr.aria-checked]="!u.disabled" class="switch" [class.on]="!u.disabled" [attr.aria-label]="'Toggle ' + u.username" (click)="toggleUserDisabled(u)"></button>
+                  <small>{{ u.disabled ? 'Disabled' : 'Enabled' }}</small>
+                </td>
                 <td>
                   <div class="coin-form">
                     <input type="number" [(ngModel)]="coinAmount[u.id]" placeholder="+100" />

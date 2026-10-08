@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
     warframe_ign VARCHAR(255) NULL,
     twitch_id VARCHAR(255) NULL,
     twitch_username VARCHAR(255) NULL,
+    disabled TINYINT(1) NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
