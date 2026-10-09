@@ -44,6 +44,12 @@ interface SsoUser {
             <p>SSO สำหรับ <b>{{ appName() }}</b> สำเร็จ<br><small>กำลังส่งกลับ...</small></p>
             <div class="spinner small"></div>
           </div>
+        } @else if (siteBlocked()) {
+          <div class="error-state">
+            <span class="error-icon">⛔</span>
+            <h2>Site not authorized</h2>
+            <p>This site is not allowed to use Alone Coin SSO. Contact the admin to approve your redirect_uri.</p>
+          </div>
         } @else {
           <div class="start-state">
             <div class="brand-lockup">
@@ -129,6 +135,7 @@ export class Sso implements OnInit {
   protected error = signal<string | null>(null);
   protected user = signal<SsoUser | null>(null);
   protected userAvatar = signal('');
+  protected siteBlocked = signal(false);
   protected appName = signal('External App');
   private redirectUri: string | null = null;
   private state: string | null = null;
@@ -142,6 +149,16 @@ export class Sso implements OnInit {
     const app = params.get('app') || params.get('client') || 'External App';
     this.appName.set(app);
 
+    // Allowlist guard: verify redirect_uri against sso_clients (admin-approved)
+    if (this.redirectUri) {
+      try {
+        await this.http.get(`${environment.apiUrl}/sso/verify?redirect_uri=${encodeURIComponent(this.redirectUri)}`).toPromise();
+      } catch {
+        this.siteBlocked.set(true);
+        return;
+      }
+    }
+
     const code = params.get('code');
     // If backend redirected here with ?code= after OAuth, exchange it
     if (code) {
@@ -152,6 +169,7 @@ export class Sso implements OnInit {
 
   protected handleLogin(provider: string): void {
     if (typeof window === 'undefined') return;
+    if (this.siteBlocked()) return;
     // Carry SSO context inside OAuth state so /login/callback can hand back to /sso
     const ssoCtx = {
       sso: true,
@@ -237,6 +255,7 @@ export class Sso implements OnInit {
   private returnToClient(u: SsoUser): void {
     if (typeof window === 'undefined') return;
     if (!this.redirectUri) return; // no external client — stay on success screen
+    if (this.siteBlocked()) return; // unapproved site — never redirect profile out
     try {
       const payload = btoa(JSON.stringify({
         id: u.id,

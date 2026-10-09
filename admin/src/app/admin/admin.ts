@@ -29,6 +29,14 @@ interface AdminUser {
   created_at?: string;
 }
 
+interface SsoClient {
+  id: number;
+  name: string;
+  redirect_uri: string;
+  enabled: number | boolean;
+  created_at: string;
+}
+
 @Component({
   selector: 'app-admin',
   standalone: true,
@@ -37,7 +45,7 @@ interface AdminUser {
   styleUrl: './admin.css',
 })
 export class Admin implements OnInit {
-  protected readonly tab = signal<'rewards' | 'users' | 'redemptions' | 'history' | 'settings'>('rewards');
+  protected readonly tab = signal<'rewards' | 'users' | 'redemptions' | 'history' | 'settings' | 'sso'>('rewards');
   protected readonly claimEnabled = signal(true);
   protected readonly alertEnabled = signal(false);
   protected alertMessage = '';
@@ -46,6 +54,7 @@ export class Admin implements OnInit {
   protected readonly redemptions = signal<any[]>([]);
   protected readonly coinHistory = signal<any[]>([]);
   protected readonly subClaims = signal<any[]>([]);
+  protected readonly ssoClients = signal<SsoClient[]>([]);
   protected redemptionUserFilter = '';
   protected coinUserFilter = '';
   protected subUserFilter = '';
@@ -86,7 +95,7 @@ export class Admin implements OnInit {
     return { title: '', description: '', cost: 100, accent: 'peach', icon: '✦', stock: 10, enabled: 1, claimable: 1, one_per_user: 0, contact_type: null };
   }
 
-  protected setTab(t: 'rewards' | 'users' | 'redemptions' | 'history' | 'settings') {
+  protected setTab(t: 'rewards' | 'users' | 'redemptions' | 'history' | 'settings' | 'sso') {
     this.tab.set(t);
   }
 
@@ -186,19 +195,21 @@ export class Admin implements OnInit {
   async refreshAll() {
     this.loading.set(true);
     try {
-      const [rewards, users, redemptions, coins, settings, subs] = await Promise.all([
+      const [rewards, users, redemptions, coins, settings, subs, sso] = await Promise.all([
         this.http.get<AdminReward[]>(`${environment.apiUrl}/rewards`).toPromise(),
         this.http.get<AdminUser[]>(`${environment.apiUrl}/admin/users`).toPromise(),
         this.http.get<any[]>(`${environment.apiUrl}/admin/redemptions`).toPromise(),
         this.http.get<any[]>(`${environment.apiUrl}/admin/coin-history`).toPromise(),
         this.http.get<any[]>(`${environment.apiUrl}/admin/settings`).toPromise(),
         this.http.get<any[]>(`${environment.apiUrl}/admin/sub-claims`).toPromise().catch(() => null),
+        this.http.get<SsoClient[]>(`${environment.apiUrl}/admin/sso/clients`).toPromise().catch(() => []),
       ]);
       if (rewards) this.rewards.set(rewards);
       if (users) this.users.set(users);
       if (redemptions) this.redemptions.set(redemptions);
       if (coins) this.coinHistory.set(coins);
       if (subs) this.subClaims.set(subs);
+      if (sso) this.ssoClients.set(sso);
       this.pruneHistoryFilters();
       if (settings) {
         const row: any = (settings as any[]).find((s: any) => s.key === 'claim_enabled');
@@ -513,6 +524,38 @@ export class Admin implements OnInit {
   protected closeHistory(): void {
     this.historyUser.set(null);
     this.historyRows.set([]);
+  }
+
+  // SSO Client helpers
+  protected ssoForm = { name: '', redirect_uri: '' };
+  protected async saveSsoClient() {
+    if (!this.ssoForm.name.trim() || !this.ssoForm.redirect_uri.trim()) {
+      this.notice.set('Name and redirect URI are required');
+      return;
+    }
+    try {
+      await this.http.post(`${environment.apiUrl}/admin/sso/clients`, this.ssoForm).toPromise();
+      this.notice.set(`Added SSO client: ${this.ssoForm.name}`);
+      this.ssoForm = { name: '', redirect_uri: '' };
+      await this.refreshSso();
+    } catch (e: any) {
+      this.notice.set(e?.error?.error || 'Failed to add SSO client');
+    }
+  }
+
+  protected async deleteSsoClient(id: number) {
+    try {
+      await this.http.delete(`${environment.apiUrl}/admin/sso/clients/${id}`).toPromise();
+      this.notice.set('SSO client removed');
+      await this.refreshSso();
+    } catch (e) {
+      this.notice.set('Delete failed');
+    }
+  }
+
+  protected async refreshSso() {
+    const sso = await this.http.get<SsoClient[]>(`${environment.apiUrl}/admin/sso/clients`).toPromise();
+    if (sso) this.ssoClients.set(sso);
   }
 
   protected async toggleUserDisabled(user: AdminUser) {

@@ -42,6 +42,14 @@ const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || crypto.randomBytes(32).
   await backfill("ALTER TABLE rewards ADD COLUMN sort_order INT NOT NULL DEFAULT 0");
   await backfill("ALTER TABLE users ADD COLUMN warframe_ign VARCHAR(255) NULL");
   await backfill("ALTER TABLE users ADD COLUMN disabled TINYINT(1) NOT NULL DEFAULT 0");
+  await backfill(`CREATE TABLE IF NOT EXISTS sso_clients (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    redirect_uri VARCHAR(1024) NOT NULL,
+    enabled TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_sso_redirect (redirect_uri(255))
+  )`);
 })();
 
 // Middleware to check Admin Auth
@@ -130,6 +138,43 @@ app.put('/admin/settings/:key', checkAdminAuth, async (req, res) => {
   } catch (error) {
     console.error('Database Error:', error);
     res.status(500).json({ error: 'Failed to update setting' });
+  }
+});
+
+// SSO Client Management
+app.get('/admin/sso/clients', checkAdminAuth, async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM sso_clients ORDER BY name ASC');
+    res.json(rows);
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to fetch SSO clients' });
+  }
+});
+
+app.post('/admin/sso/clients', checkAdminAuth, async (req, res) => {
+  try {
+    const { name, redirect_uri } = req.body;
+    if (!name || !redirect_uri) return res.status(400).json({ error: 'name and redirect_uri required' });
+    const [result] = await pool.query(
+      'INSERT INTO sso_clients (name, redirect_uri) VALUES (?, ?)',
+      [name, redirect_uri]
+    );
+    res.json({ id: result.insertId, name, redirect_uri });
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to add SSO client' });
+  }
+});
+
+app.delete('/admin/sso/clients/:id', checkAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM sso_clients WHERE id = ?', [id]);
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to remove SSO client' });
   }
 });
 
@@ -266,6 +311,25 @@ app.get('/leaderboard', async (req, res) => {
   } catch (error) {
     console.error('Database Error:', error);
     res.status(500).json({ error: 'Failed to fetch leaderboard' });
+  }
+});
+
+// Public: check if SSO redirect_uri is allowed (frontend SSO page guard)
+app.get('/sso/verify', async (req, res) => {
+  try {
+    const { redirect_uri } = req.query;
+    if (!redirect_uri) return res.status(403).json({ allowed: false, error: 'redirect_uri required' });
+    const [rows] = await pool.query(
+      'SELECT id, name FROM sso_clients WHERE redirect_uri = ? AND enabled = 1',
+      [String(redirect_uri)]
+    );
+    if (rows.length === 0) {
+      return res.status(403).json({ allowed: false, error: 'This site is not authorized to use Alone Coin SSO' });
+    }
+    res.json({ allowed: true, name: rows[0].name });
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ allowed: false, error: 'Internal server error' });
   }
 });
 

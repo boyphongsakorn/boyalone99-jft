@@ -79,6 +79,16 @@ CREATE TABLE IF NOT EXISTS claimed_follows (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
+-- SSO clients allowed to use /sso (redirect_uri allowlist)
+CREATE TABLE IF NOT EXISTS sso_clients (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    redirect_uri VARCHAR(1024) NOT NULL,
+    enabled TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_sso_redirect (redirect_uri(255))
+);
+
 -- Site Settings Table
 CREATE TABLE IF NOT EXISTS settings (
     `key` VARCHAR(255) PRIMARY KEY,
