@@ -1,5 +1,7 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 @Component({
@@ -21,14 +23,20 @@ import { environment } from '../../environments/environment';
     .alert-bar button:hover { opacity: 1; }
   `],
 })
-export class AlertBar implements OnInit {
+export class AlertBar implements OnInit, OnDestroy {
   protected readonly visible = signal(false);
   protected readonly message = signal('');
+  private routerSub: any;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private router: Router) {}
 
   async ngOnInit() {
     if (typeof window === 'undefined') return;
+    // Hide on SSO pages (external login handoff should stay clean)
+    this.routerSub = this.router.events.pipe(filter((e) => e instanceof NavigationEnd)).subscribe((e: NavigationEnd) => {
+      if (this.onSso(e.urlAfterRedirects)) this.visible.set(false);
+    });
+    if (this.onSso(this.router.url)) return;
     try {
       const s = await this.http.get<{ alert_enabled: boolean; alert_message: string }>(`${environment.apiUrl}/settings?t=${Date.now()}`).toPromise();
       if (s?.alert_enabled && s.alert_message) {
@@ -41,6 +49,14 @@ export class AlertBar implements OnInit {
         }
       }
     } catch { /* no alert */ }
+  }
+
+  private onSso(url: string): boolean {
+    return url.startsWith('/sso');
+  }
+
+  ngOnDestroy() {
+    this.routerSub?.unsubscribe?.();
   }
 
   protected dismiss(): void {
