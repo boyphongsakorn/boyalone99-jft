@@ -85,6 +85,11 @@ export class AloneCoin implements OnInit {
     }
   }
 
+  protected async followAndCheckYoutube(): Promise<void> {
+    if (typeof window !== 'undefined') window.open(this.youtubeUrl(), '_blank', 'noopener');
+    await this.checkYoutube();
+  }
+
   private async refreshStatus(): Promise<void> {
     const id = this.userId();
     if (!id) return;

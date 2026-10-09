@@ -72,15 +72,16 @@
               <button type="button" class="claim-btn primary" (click)="claim('twitch')" [disabled]="twitchClaimed() || checking()">
                 {{ twitchClaimed() ? 'รับแล้ว ✓' : 'รับ +100 AC (Twitch)' }}
               </button>
-              <a class="claim-btn" [href]="youtubeUrl()" target="_blank" rel="noopener">ติดตาม YouTube</a>
-              <button type="button" class="claim-btn primary" (click)="checkYoutube()" [disabled]="checking()">เช็คซับ YouTube</button>
+              <button type="button" class="claim-btn primary" (click)="followAndCheckYoutube()" [disabled]="checking()">
+                {{ checking() ? 'กำลังเช็ค…' : youtubeSubscribed() === true ? 'เช็คซับอีกครั้ง ↻' : 'ติดตาม YouTube / เช็คซับ' }}
+              </button>
               <button type="button" class="claim-btn primary" (click)="claim('youtube')" [disabled]="youtubeClaimed() || checking()">
                 {{ youtubeClaimed() ? 'รับแล้ว ✓' : 'รับ +100 AC (YouTube)' }}
               </button>
             }
           </div>
           @if (youtubeSubscribed() === false && isLoggedIn()) {
-            <p class="claim-hint">ยังไม่พบการซับ YouTube — กดติดตามช่องก่อนแล้วกด “เช็คซับ YouTube” อีกครั้ง (ต้องล็อกอินด้วย YouTube/Google ที่มีสิทธิ์ youtube.readonly)</p>
+            <p class="claim-hint">ยังไม่พบการซับ YouTube — กดปุ่มติดตามด้านบนเพื่อเปิดช่องแล้วกด Subscribe จากนั้นกลับมากดปุ่มเดิมอีกครั้งเพื่อเช็ค (ต้องล็อกอินด้วย YouTube/Google ที่มีสิทธิ์ youtube.readonly)</p>
           } @else if (youtubeSubscribed() === true && isLoggedIn() && !youtubeClaimed()) {
             <p class="claim-hint">✓ พบการซับแล้ว — กดรับได้เลย</p>
           }
