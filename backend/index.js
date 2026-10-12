@@ -28,6 +28,14 @@ const pool = mysql.createPool({
 
 const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || crypto.randomBytes(32).toString('hex');
 
+// Avatar helper — stored avatars may be a Discord hash, a full URL
+// (Google/Twitch), or null. Returns a displayable URL or null.
+function buildAvatarUrl(userId, storedAvatar) {
+  if (!storedAvatar) return null;
+  if (String(storedAvatar).startsWith('http')) return storedAvatar;
+  return `https://cdn.discordapp.com/avatars/${userId}/${storedAvatar}.png`;
+}
+
 // Startup migration — add missing columns for DBs created before they existed
 // (runs once at boot so admin PUT/POST and GET /rewards never 500 on first use)
 (async () => {
@@ -1244,9 +1252,12 @@ app.get('/auth/google/callback', async (req, res) => {
     );
     if (linked.length > 0) {
       const owner = linked[0];
+      // Google image first; fall back to the linked Discord/Twitch avatar when Google has none
+      const ownerAvatarUrl = buildAvatarUrl(owner.id, owner.avatar);
       return res.json({
         username: owner.username,
-        avatar: googleUser.picture,
+        avatar: null,
+        avatarUrl: googleUser.picture || ownerAvatarUrl || null,
         id: owner.id,
         email: owner.email || googleUser.email || null,
         accessToken,
@@ -1266,7 +1277,8 @@ app.get('/auth/google/callback', async (req, res) => {
 
     res.json({
       username: googleUser.name,
-      avatar: googleUser.picture,
+      avatar: null,
+      avatarUrl: googleUser.picture || null,
       id: userId,
       email: dbRows[0]?.email ?? googleUser.email ?? null,
       accessToken,

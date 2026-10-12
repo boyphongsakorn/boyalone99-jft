@@ -50,10 +50,18 @@ export class Profile implements OnInit {
         const rawProvider = (parsed.provider || '').toLowerCase();
         this.mainProvider.set(rawProvider === 'google' ? 'youtube' : (rawProvider || null));
         this.email.set(parsed.email || '');
+        // Avatar priority: avatarUrl (Google/Twitch full URL) → avatar
+        // (may be Discord hash or full URL) → default
         if (parsed.avatarUrl) {
           this.userAvatar.set(parsed.avatarUrl);
         } else if (parsed.avatar) {
-          this.userAvatar.set(`https://cdn.discordapp.com/avatars/${parsed.id}/${parsed.avatar}.png`);
+          const raw = String(parsed.avatar);
+          if (raw.startsWith('http')) {
+            this.userAvatar.set(raw);
+          } else {
+            const rawId = String(parsed.id || '').replace(/^discord:/, '');
+            this.userAvatar.set(`https://cdn.discordapp.com/avatars/${rawId}/${raw}.png`);
+          }
         }
         if (parsed.provider === 'discord') {
           this.linkedDiscord.set(parsed.username || 'Linked');
@@ -96,10 +104,18 @@ export class Profile implements OnInit {
             this.linkedYoutube.set(name);
             try { localStorage.setItem('linked_youtube', name); } catch { /* ignore */ }
           }
-          if (profile.google_sub || profile.google_email) {
-            const name = profile.google_email ? profile.google_email.split('@')[0] : 'Linked';
-            this.linkedYoutube.set(name);
-            try { localStorage.setItem('linked_youtube', name); } catch { /* ignore */ }
+          // Avatar fallback: if current avatar is the default placeholder but
+          // the DB still has a stored Discord/Twitch avatar, use that instead
+          const current = this.userAvatar();
+          const isPlaceholder = !current || current.includes('embed/avatars/0.png');
+          if (isPlaceholder && profile.avatar) {
+            const raw = String(profile.avatar);
+            if (raw.startsWith('http')) {
+              this.userAvatar.set(raw);
+            } else {
+              const rawId = String(profile.id || userId).replace(/^discord:/, '');
+              this.userAvatar.set(`https://cdn.discordapp.com/avatars/${rawId}/${raw}.png`);
+            }
           }
         }
       } catch (e) {

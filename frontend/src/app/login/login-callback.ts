@@ -184,7 +184,18 @@ export class LoginCallback implements OnInit {
 
         const user = userData as DiscordUser;
         this.user.set(user);
-        this.userAvatar.set(user.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png');
+        // Handle different avatar formats: avatarUrl (Google/Twitch full URL) →
+        // avatar (Discord hash or full URL) → default placeholder
+        const avatarRaw = user.avatar;
+        let avatarUrl = (userData as any)?.avatarUrl || '';
+        if (!avatarUrl && avatarRaw?.startsWith('http')) {
+          avatarUrl = avatarRaw;
+        } else if (!avatarUrl && avatarRaw) {
+          const rawId = String(user.id || '').replace(/^discord:/, '');
+          avatarUrl = `https://cdn.discordapp.com/avatars/${rawId}/${avatarRaw}.png`;
+        }
+        if (!avatarUrl) avatarUrl = 'https://cdn.discordapp.com/embed/avatars/0.png';
+        this.userAvatar.set(avatarUrl);
         // If Google was already linked to another (discord) account, backend
         // returns that owner — preserve it instead of overwriting with google:xxx
         if ((userData as any)?.linked_account) {
