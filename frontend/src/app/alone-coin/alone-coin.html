@@ -184,12 +184,12 @@
     <p class="notice" role="status">{{ msg }}</p>
   }
 
-  <aside class="guide-note">
-    @if (!isLoggedIn()) {
+  @if (!isLoggedIn()) {
+    <aside class="guide-note">
       <span aria-hidden="true">◎</span>
       <p>ต้องล็อกอินก่อนจึงจะสะสมเหรียญหรือแลกของรางวัลได้</p>
-    }
-  </aside>
+    </aside>
+  }
 
   <footer class="guide-footer">
     <span>Alone Coin ยังเป็นข้อมูลจำลอง</span>
