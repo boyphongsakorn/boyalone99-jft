@@ -42,6 +42,8 @@ const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || crypto.randomBytes(32).
   await backfill("ALTER TABLE rewards ADD COLUMN sort_order INT NOT NULL DEFAULT 0");
   await backfill("ALTER TABLE users ADD COLUMN warframe_ign VARCHAR(255) NULL");
   await backfill("ALTER TABLE users ADD COLUMN disabled TINYINT(1) NOT NULL DEFAULT 0");
+  await backfill("ALTER TABLE users ADD COLUMN google_sub VARCHAR(255) NULL");
+  await backfill("ALTER TABLE users ADD COLUMN google_email VARCHAR(255) NULL");
   await backfill(`CREATE TABLE IF NOT EXISTS sso_clients (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -748,8 +750,14 @@ app.get('/users/:id', async (req, res) => {
     await pool.query("ALTER TABLE users ADD COLUMN warframe_ign VARCHAR(255) NULL").catch((e) => {
       if (e.code !== 'ER_DUP_FIELDNAME') throw e;
     });
+    await pool.query("ALTER TABLE users ADD COLUMN google_sub VARCHAR(255) NULL").catch((e) => {
+      if (e.code !== 'ER_DUP_FIELDNAME') throw e;
+    });
+    await pool.query("ALTER TABLE users ADD COLUMN google_email VARCHAR(255) NULL").catch((e) => {
+      if (e.code !== 'ER_DUP_FIELDNAME') throw e;
+    });
     const [rows] = await pool.query(
-      'SELECT id, username, email, avatar, alone_coin, epic_username, warframe_ign, twitch_id, twitch_username FROM users WHERE id = ?',
+      'SELECT id, username, email, avatar, alone_coin, epic_username, warframe_ign, twitch_id, twitch_username, google_sub, google_email FROM users WHERE id = ?',
       [id]
     );
     if (rows.length === 0) return res.status(404).json({ error: 'User not found' });
@@ -769,6 +777,12 @@ app.put('/users/:id', async (req, res) => {
     await pool.query("ALTER TABLE users ADD COLUMN warframe_ign VARCHAR(255) NULL").catch((e) => {
       if (e.code !== 'ER_DUP_FIELDNAME') throw e;
     });
+    await pool.query("ALTER TABLE users ADD COLUMN google_sub VARCHAR(255) NULL").catch((e) => {
+      if (e.code !== 'ER_DUP_FIELDNAME') throw e;
+    });
+    await pool.query("ALTER TABLE users ADD COLUMN google_email VARCHAR(255) NULL").catch((e) => {
+      if (e.code !== 'ER_DUP_FIELDNAME') throw e;
+    });
     await pool.query('UPDATE users SET email = ?, epic_username = ?, warframe_ign = ? WHERE id = ?', [
       email || null,
       epic_username || null,
@@ -776,7 +790,7 @@ app.put('/users/:id', async (req, res) => {
       id,
     ]);
     const [rows] = await pool.query(
-      'SELECT id, username, email, avatar, alone_coin, epic_username, warframe_ign, twitch_id, twitch_username FROM users WHERE id = ?',
+      'SELECT id, username, email, avatar, alone_coin, epic_username, warframe_ign, twitch_id, twitch_username, google_sub, google_email FROM users WHERE id = ?',
       [id]
     );
     if (rows.length === 0) return res.status(404).json({ error: 'User not found' });
@@ -1204,13 +1218,49 @@ app.get('/auth/google/callback', async (req, res) => {
     });
 
     const googleUser = userResponse.data;
-    const userId = `google:${googleUser.sub}`;
+    const googleSub = String(googleUser.sub);
+    // If link mode (main user id passed), attach Google to existing user instead of creating google:xxx
+    const linkUserId = req.query.linkUserId ? String(req.query.linkUserId) : null;
+    if (linkUserId) {
+      // Only block if another account already owns this Google sub
+      const [owner] = await pool.query('SELECT id FROM users WHERE google_sub = ? AND id != ?', [googleSub, linkUserId]);
+      if (owner.length > 0) return res.status(409).json({ error: 'This YouTube account is already linked to another user' });
+      await pool.query(
+        'UPDATE users SET google_sub = ?, google_email = ? WHERE id = ?',
+        [googleSub, googleUser.email || null, linkUserId]
+      );
+      return res.json({
+        id: linkUserId,
+        youtube: googleUser.name,
+        linked: true,
+        provider: 'youtube',
+        accessToken,
+      });
+    }
+    // Login mode: if this Google sub is already linked to an account, log into THAT account
+    const [linked] = await pool.query(
+      'SELECT id, username, email, avatar FROM users WHERE google_sub = ?',
+      [googleSub]
+    );
+    if (linked.length > 0) {
+      const owner = linked[0];
+      return res.json({
+        username: owner.username,
+        avatar: googleUser.picture,
+        id: owner.id,
+        email: owner.email || googleUser.email || null,
+        accessToken,
+        provider: 'discord',
+        linked_account: true,
+      });
+    }
+    const userId = `google:${googleSub}`;
 
     await pool.query(
-      `INSERT INTO users (id, username, email, avatar, alone_coin)
-       VALUES (?, ?, ?, ?, 0)
-       ON DUPLICATE KEY UPDATE username = VALUES(username), avatar = VALUES(avatar)`,
-      [userId, googleUser.name, googleUser.email || null, googleUser.picture || null]
+      `INSERT INTO users (id, username, email, avatar, alone_coin, google_sub, google_email)
+       VALUES (?, ?, ?, ?, 0, ?, ?)
+       ON DUPLICATE KEY UPDATE username = VALUES(username), avatar = VALUES(avatar), google_sub = VALUES(google_sub), google_email = VALUES(google_email)`,
+      [userId, googleUser.name, googleUser.email || null, googleUser.picture || null, googleSub, googleUser.email || null]
     );
     const [dbRows] = await pool.query('SELECT email FROM users WHERE id = ?', [userId]);
 

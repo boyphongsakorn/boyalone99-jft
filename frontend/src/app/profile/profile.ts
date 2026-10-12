@@ -91,6 +91,16 @@ export class Profile implements OnInit {
             this.linkedTwitch.set(profile.twitch_username || 'Linked');
             try { localStorage.setItem('linked_twitch', profile.twitch_username || 'Linked'); } catch { /* ignore */ }
           }
+          if (profile.google_sub || profile.google_email) {
+            const name = profile.google_email ? profile.google_email.split('@')[0] : 'Linked';
+            this.linkedYoutube.set(name);
+            try { localStorage.setItem('linked_youtube', name); } catch { /* ignore */ }
+          }
+          if (profile.google_sub || profile.google_email) {
+            const name = profile.google_email ? profile.google_email.split('@')[0] : 'Linked';
+            this.linkedYoutube.set(name);
+            try { localStorage.setItem('linked_youtube', name); } catch { /* ignore */ }
+          }
         }
       } catch (e) {
         console.error('Failed to fetch profile from database', e);
@@ -160,7 +170,7 @@ export class Profile implements OnInit {
       YouTube: {
         clientId: environment.youtubeClientId,
         endpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
-        scope: 'openid email profile',
+        scope: 'openid email profile https://www.googleapis.com/auth/youtube.readonly',
       },
     } as const;
     const settings = providerSettings[provider];

@@ -161,14 +161,37 @@ export class LoginCallback implements OnInit {
         this.userAvatar.set(twitchData.avatarUrl || 'https://cdn.discordapp.com/embed/avatars/0.png');
         localStorage.setItem('user_profile', JSON.stringify(user));
       } else if (provider === 'youtube' || provider === 'google') {
-        // Google/YouTube login
+        // Google/YouTube login OR link to main profile
+        const linkQs = isLink && linkUserId ? `&linkUserId=${encodeURIComponent(linkUserId)}` : '';
         const userData: any = await this.http.get(
-          `${environment.apiUrl}/auth/google/callback?code=${code}`
+          `${environment.apiUrl}/auth/google/callback?code=${code}${linkQs}`
         ).toPromise();
+        if (isLink) {
+          // Link mode: save youtube name, go back to profile (no new account)
+          if (typeof window !== 'undefined') {
+            if (userData?.youtube) {
+              try { localStorage.setItem('linked_youtube', String(userData.youtube)); } catch { /* ignore */ }
+            } else if (userData?.username) {
+              try { localStorage.setItem('linked_youtube', String(userData.username)); } catch { /* ignore */ }
+            }
+            if (userData?.accessToken) {
+              try { localStorage.setItem('google_access_token', String(userData.accessToken)); } catch { /* ignore */ }
+            }
+          }
+          this.router.navigateByUrl('/profile');
+          return;
+        }
 
         const user = userData as DiscordUser;
         this.user.set(user);
         this.userAvatar.set(user.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png');
+        // If Google was already linked to another (discord) account, backend
+        // returns that owner — preserve it instead of overwriting with google:xxx
+        if ((userData as any)?.linked_account) {
+          localStorage.setItem('user_profile', JSON.stringify({ ...user, provider: 'discord' }));
+          this.loading.set(false);
+          return;
+        }
 
         if (typeof window !== 'undefined') {
           // Persist Google access token for YouTube Data API verification (subscriptions.list)
