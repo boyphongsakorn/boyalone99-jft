@@ -58,6 +58,17 @@ interface SsoUser {
             </div>
             <h1 id="sso-title">เข้าสู่ระบบสำหรับ<br><em>{{ appName() }}</em></h1>
             <p class="intro-copy">เลือกบัญชีเพื่อเข้าสู่ระบบ {{ appName() }}</p>
+            @if (currentUser(); as cu) {
+              <div class="current-user">
+                <img [src]="currentAvatar()" alt="{{ cu.username }}">
+                <div class="current-info">
+                  <b>{{ cu.username }}</b>
+                  <small>เข้าสู่ระบบอยู่แล้ว • {{ cu.provider || 'Alone Coin' }}</small>
+                </div>
+                <button class="continue-btn" type="button" (click)="continueAsCurrent()">ดำเนินการต่อ</button>
+              </div>
+              <div class="switch-divider" aria-hidden="true"><span>หรือเปลี่ยนบัญชี</span></div>
+            }
             <div class="provider-list" aria-label="Sign in options">
               <button class="provider-button discord" type="button" (click)="handleLogin('Discord')">
                 <span class="provider-icon" aria-hidden="true">D</span>
@@ -109,6 +120,15 @@ interface SsoUser {
     .brand-mark i:nth-child(2) { background: #e0b44f; height: 78%; margin-top: auto; }
     .brand-mark i:nth-child(3) { background: #5d8278; height: 54%; margin-top: auto; }
     .intro-copy { color: #77746d; font-size: .9rem; margin: 0; }
+    .current-user { display: flex; align-items: center; gap: 12px; width: 100%; background: #fff; border: 2px solid #252525; border-radius: 8px; box-shadow: 3px 3px 0 #252525; padding: 10px 12px; text-align: left; }
+    .current-user img { width: 44px; height: 44px; border-radius: 50%; border: 2px solid #252525; background: white; object-fit: cover; }
+    .current-info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+    .current-info b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .current-info small { color: #77746d; font-size: .75rem; }
+    .continue-btn { background: #252525; color: #f8f5ec; border: none; border-radius: 6px; padding: 8px 14px; font-family: inherit; font-weight: 700; cursor: pointer; white-space: nowrap; }
+    .continue-btn:hover { background: #c05d46; }
+    .switch-divider { display: flex; align-items: center; gap: 10px; width: 100%; color: #77746d; font-size: .8rem; }
+    .switch-divider::before, .switch-divider::after { content: ''; flex: 1; border-top: 1px dashed rgba(37,37,37,.3); }
     .provider-list { display: grid; gap: 12px; width: 100%; margin-top: 8px; }
     .provider-button {
       display: flex; align-items: center; gap: 12px; width: 100%;
@@ -137,6 +157,8 @@ export class Sso implements OnInit {
   protected userAvatar = signal('');
   protected siteBlocked = signal(false);
   protected appName = signal('External App');
+  protected currentUser = signal<SsoUser | null>(null);
+  protected currentAvatar = signal('');
   private redirectUri: string | null = null;
   private state: string | null = null;
 
@@ -158,6 +180,19 @@ export class Sso implements OnInit {
         return;
       }
     }
+
+    // Already logged in? Show current session on top — user can continue
+    // or pick another provider below to switch accounts.
+    try {
+      const saved = typeof window !== 'undefined' ? localStorage.getItem('user_profile') : null;
+      if (saved) {
+        const parsed = JSON.parse(saved) as SsoUser;
+        if (parsed?.id) {
+          this.currentUser.set(parsed);
+          this.currentAvatar.set(this.resolveAvatar(parsed));
+        }
+      }
+    } catch { /* ignore bad session */ }
 
     const code = params.get('code');
     // If backend redirected here with ?code= after OAuth, exchange it
@@ -234,11 +269,7 @@ export class Sso implements OnInit {
       }
       const u = profile as SsoUser;
       this.user.set(u);
-      this.userAvatar.set(
-        (u as any).avatarUrl || u.avatar?.startsWith('http') ? (u as any).avatarUrl || (u.avatar as string) :
-        u.id && u.avatar ? `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png` :
-        'https://cdn.discordapp.com/embed/avatars/0.png'
-      );
+      this.userAvatar.set(this.resolveAvatar(u));
       if (typeof window !== 'undefined' && (profile as any)?.accessToken) {
         try { localStorage.setItem('google_access_token', String((profile as any).accessToken)); } catch { /* ignore */ }
       }
@@ -250,6 +281,26 @@ export class Sso implements OnInit {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  protected continueAsCurrent(): void {
+    const u = this.currentUser();
+    if (!u || this.siteBlocked()) return;
+    this.user.set(u);
+    this.userAvatar.set(this.currentAvatar() || this.resolveAvatar(u));
+    this.returnToClient(u);
+  }
+
+  private resolveAvatar(u: SsoUser): string {
+    const url = (u as any).avatarUrl;
+    if (url) return url;
+    const raw = u.avatar ? String(u.avatar) : '';
+    if (raw.startsWith('http')) return raw;
+    if (raw && u.id) {
+      const rawId = String(u.id).replace(/^discord:/, '');
+      return `https://cdn.discordapp.com/avatars/${rawId}/${raw}.png`;
+    }
+    return 'https://cdn.discordapp.com/embed/avatars/0.png';
   }
 
   private returnToClient(u: SsoUser): void {
