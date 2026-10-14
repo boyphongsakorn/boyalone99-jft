@@ -95,15 +95,15 @@
           </div>
           <div class="reward-action">
             <span class="cost"><b>{{ reward.cost | number }}</b> AC</span>
-            <button type="button" [disabled]="!claimEnabled() || (reward.claimable === 0 || reward.claimable === false) || alreadyClaimed(reward) || !isLoggedIn() || reward.stock <= 0" (click)="redeem(reward)">
-              @if (!claimEnabled() || (reward.claimable === 0 || reward.claimable === false)) {
+            <button type="button" [disabled]="isLoggedIn() && (!claimEnabled() || !isClaimable(reward) || alreadyClaimed(reward) || reward.stock <= 0)" (click)="onClaimClick(reward)">
+              @if (!isLoggedIn()) {
+                ล็อกอินเพื่อรับ <span aria-hidden="true">↗</span>
+              } @else if (!claimEnabled() || !isClaimable(reward)) {
                 ยังไม่เปิดให้รับ
               } @else if (alreadyClaimed(reward)) {
                 แลกแล้ว
-              } @else if (isLoggedIn()) {
-                รับ <span aria-hidden="true">↗</span>
               } @else {
-                ล็อกอินเพื่อรับ <span aria-hidden="true">↗</span>
+                รับ <span aria-hidden="true">↗</span>
               }
             </button>
           </div>

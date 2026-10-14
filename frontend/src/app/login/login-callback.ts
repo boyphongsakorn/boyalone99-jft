@@ -222,10 +222,26 @@ export class LoginCallback implements OnInit {
 
         const user = userData as DiscordUser;
         this.user.set(user);
-        this.userAvatar.set(`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`);
+        // Discord avatars are hashes; keep the URL builder for that provider only
+        const rawDiscordAvatar = String(user.avatar || '');
+        this.userAvatar.set(
+          rawDiscordAvatar.startsWith('http')
+            ? rawDiscordAvatar
+            : rawDiscordAvatar
+              ? `https://cdn.discordapp.com/avatars/${String(user.id).replace(/^discord:/, '')}/${rawDiscordAvatar}.png`
+              : 'https://cdn.discordapp.com/embed/avatars/0.png'
+        );
 
         // Save to local session for the profile page
         localStorage.setItem('user_profile', JSON.stringify({ ...user, provider: 'discord' }));
+      }
+      // Return the user to where they clicked "login to claim" (if any)
+      if (typeof window !== 'undefined') {
+        const back = localStorage.getItem('post_login_redirect');
+        if (back) {
+          localStorage.removeItem('post_login_redirect');
+          this.router.navigateByUrl(back);
+        }
       }
     } catch (e) {
       this.error.set(`ยืนยันตัวตนด้วย ${provider === 'twitch' ? 'Twitch' : provider === 'google' || provider === 'youtube' ? 'Google' : 'Discord'} ไม่สำเร็จ`);

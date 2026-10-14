@@ -177,6 +177,18 @@ export class Rewards implements OnInit {
     return this.claimEnabled() && this.isClaimable(reward) && !this.alreadyClaimed(reward) && this.isLoggedIn() && this.balance() >= reward.cost;
   }
 
+  protected async onClaimClick(reward: Reward): Promise<void> {
+    // Not logged in: route to /login so the user can authenticate first
+    if (!this.isLoggedIn()) {
+      if (typeof window !== 'undefined') {
+        try { localStorage.setItem('post_login_redirect', this.router.url || '/'); } catch { /* ignore */ }
+      }
+      this.router.navigateByUrl('/login');
+      return;
+    }
+    await this.redeem(reward);
+  }
+
   protected async redeem(reward: Reward): Promise<void> {
     if (reward.enabled === 0 || reward.enabled === false) {
       this.notice.set('รางวัลนี้ปิดให้แลกชั่วคราว');
