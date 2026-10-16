@@ -367,11 +367,20 @@
   @if (tab() === 'sso') {
     <section class="card">
       <h2>SSO Allowlist</h2>
-      <p style="font-size: .78rem; color: var(--muted);">Only sites in this list can initiate /sso login and receive a profile payload. Exact match on redirect_uri is required.</p>
+      <p style="font-size: .78rem; color: var(--muted);">Only sites in this list can initiate /sso login and receive a profile payload. Exact match on redirect_uri is required. Choose which social accounts each site may use.</p>
       <div class="form-card" style="margin: 16px 0; border: 1px solid #ddd; padding: 16px; border-radius: 8px;">
         <div class="row2">
           <label>Site Name<input [(ngModel)]="ssoForm.name" placeholder="e.g. My Cool App" /></label>
           <label>Redirect URI<input [(ngModel)]="ssoForm.redirect_uri" placeholder="https://example.com/callback" /></label>
+        </div>
+        <div class="provider-picker">
+          <span class="picker-label">Login methods</span>
+          @for (p of ssoProviders; track p) {
+            <label class="provider-chip" [class.on]="ssoForm.providers.includes(p)">
+              <input type="checkbox" [checked]="ssoForm.providers.includes(p)" (change)="toggleSsoFormProvider(p)" />
+              <span>{{ p }}</span>
+            </label>
+          }
         </div>
         <div class="form-actions">
           <button type="button" class="primary" (click)="saveSsoClient()">Add Site</button>
@@ -379,17 +388,27 @@
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Name</th><th>Redirect URI</th><th>Created</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th>Redirect URI</th><th>Login methods</th><th>Created</th><th></th></tr></thead>
           <tbody>
             @for (s of ssoClients(); track s.id) {
               <tr>
                 <td>{{ s.name }}</td>
                 <td><small>{{ s.redirect_uri }}</small></td>
+                <td>
+                  <div class="provider-picker compact">
+                    @for (p of ssoProviders; track p) {
+                      <label class="provider-chip" [class.on]="clientAllows(s, p)">
+                        <input type="checkbox" [checked]="clientAllows(s, p)" (change)="toggleSsoClientProvider(s, p)" />
+                        <span>{{ p }}</span>
+                      </label>
+                    }
+                  </div>
+                </td>
                 <td><small>{{ s.created_at | date:'shortDate' }}</small></td>
                 <td class="actions"><button type="button" class="danger" (click)="deleteSsoClient(s.id)">Remove</button></td>
               </tr>
             } @empty {
-              <tr><td colspan="4">No authorized sites found.</td></tr>
+              <tr><td colspan="5">No authorized sites found.</td></tr>
             }
           </tbody>
         </table>

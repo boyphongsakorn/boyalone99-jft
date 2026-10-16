@@ -46,6 +46,12 @@ h1 em { color: var(--coral); font-style: normal; }
 .card label { display: grid; gap: 6px; font-size: .75rem; font-weight: 700; margin-bottom: 12px; color: var(--muted); text-transform: uppercase; }
 .card input, .card textarea, .card select { background: #fff; border: 2px solid var(--ink); border-radius: 4px 8px 4px 6px; color: var(--ink); font: 400 .9rem inherit; padding: 8px 10px; width: 100%; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.provider-picker { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
+.provider-picker.compact { margin: 0; }
+.provider-picker .picker-label { color: var(--muted); font-size: .75rem; font-weight: 700; text-transform: uppercase; }
+.provider-chip { background: #fff; border: 2px solid var(--line); border-radius: 999px; cursor: pointer; display: inline-flex !important; align-items: center; gap: 6px; font-size: .75rem; margin: 0 !important; padding: 4px 10px; text-transform: none !important; }
+.provider-chip input { accent-color: var(--teal); width: auto !important; margin: 0; }
+.provider-chip.on { border-color: var(--teal); background: #e4eee9; }
 .form-actions { display: flex; gap: 10px; margin-top: 8px; }
 button.primary { background: var(--ink); border: 2px solid var(--ink); border-radius: 4px 8px 4px 6px; color: var(--paper); cursor: pointer; font: 700 .8rem inherit; padding: 8px 16px; }
 button.primary:hover { background: var(--coral); border-color: var(--coral); }

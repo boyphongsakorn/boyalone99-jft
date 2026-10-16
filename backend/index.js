@@ -57,9 +57,12 @@ function buildAvatarUrl(userId, storedAvatar) {
     name VARCHAR(255) NOT NULL,
     redirect_uri VARCHAR(1024) NOT NULL,
     enabled TINYINT(1) NOT NULL DEFAULT 1,
+    providers VARCHAR(255) NOT NULL DEFAULT 'discord,twitch,youtube',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_sso_redirect (redirect_uri(255))
   )`);
+  // Existing tables created before per-site provider control existed
+  await backfill("ALTER TABLE sso_clients ADD COLUMN providers VARCHAR(255) NOT NULL DEFAULT 'discord,twitch,youtube'");
 })();
 
 // Middleware to check Admin Auth
@@ -152,10 +155,25 @@ app.put('/admin/settings/:key', checkAdminAuth, async (req, res) => {
 });
 
 // SSO Client Management
+// `providers` = comma list of social accounts allowed to log in for this site
+// (e.g. "discord,youtube"). Empty/NULL means all providers allowed.
+const SSO_PROVIDERS = ['discord', 'twitch', 'youtube'];
+const normalizeProviders = (raw) => {
+  if (raw === undefined || raw === null) return null; // null = all allowed
+  const list = Array.isArray(raw) ? raw : String(raw).split(',');
+  const clean = list
+    .map((p) => String(p).trim().toLowerCase())
+    .filter((p) => SSO_PROVIDERS.includes(p));
+  return [...new Set(clean)];
+};
+
 app.get('/admin/sso/clients', checkAdminAuth, async (req, res) => {
   try {
+    await pool.query("ALTER TABLE sso_clients ADD COLUMN providers VARCHAR(255) NOT NULL DEFAULT 'discord,twitch,youtube'").catch((e) => {
+      if (e.code !== 'ER_DUP_FIELDNAME') throw e;
+    });
     const [rows] = await pool.query('SELECT * FROM sso_clients ORDER BY name ASC');
-    res.json(rows);
+    res.json(rows.map((r) => ({ ...r, providers: normalizeProviders(r.providers) ?? [...SSO_PROVIDERS] })));
   } catch (error) {
     console.error('Database Error:', error);
     res.status(500).json({ error: 'Failed to fetch SSO clients' });
@@ -166,14 +184,46 @@ app.post('/admin/sso/clients', checkAdminAuth, async (req, res) => {
   try {
     const { name, redirect_uri } = req.body;
     if (!name || !redirect_uri) return res.status(400).json({ error: 'name and redirect_uri required' });
+    await pool.query("ALTER TABLE sso_clients ADD COLUMN providers VARCHAR(255) NOT NULL DEFAULT 'discord,twitch,youtube'").catch((e) => {
+      if (e.code !== 'ER_DUP_FIELDNAME') throw e;
+    });
+    const providers = normalizeProviders(req.body.providers);
+    const providerValue = (providers ?? [...SSO_PROVIDERS]).join(',');
     const [result] = await pool.query(
-      'INSERT INTO sso_clients (name, redirect_uri) VALUES (?, ?)',
-      [name, redirect_uri]
+      'INSERT INTO sso_clients (name, redirect_uri, providers) VALUES (?, ?, ?)',
+      [name, redirect_uri, providerValue]
     );
-    res.json({ id: result.insertId, name, redirect_uri });
+    res.json({ id: result.insertId, name, redirect_uri, providers: providers ?? [...SSO_PROVIDERS] });
   } catch (error) {
     console.error('Database Error:', error);
     res.status(500).json({ error: 'Failed to add SSO client' });
+  }
+});
+
+// Update a site's allowed social logins (and optionally name/redirect/enabled)
+app.put('/admin/sso/clients/:id', checkAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const providers = normalizeProviders(req.body.providers);
+    if (providers !== null && providers.length === 0) {
+      return res.status(400).json({ error: 'Select at least one social account' });
+    }
+    const sets = [];
+    const params = [];
+    if (providers !== null) { sets.push('providers = ?'); params.push(providers.join(',')); }
+    if (typeof req.body.name === 'string' && req.body.name.trim()) { sets.push('name = ?'); params.push(req.body.name.trim()); }
+    if (typeof req.body.redirect_uri === 'string' && req.body.redirect_uri.trim()) { sets.push('redirect_uri = ?'); params.push(req.body.redirect_uri.trim()); }
+    if (req.body.enabled !== undefined) { sets.push('enabled = ?'); params.push(req.body.enabled === true || req.body.enabled === 1 || req.body.enabled === '1' ? 1 : 0); }
+    if (sets.length === 0) return res.status(400).json({ error: 'Nothing to update' });
+    params.push(id);
+    await pool.query(`UPDATE sso_clients SET ${sets.join(', ')} WHERE id = ?`, params);
+    const [rows] = await pool.query('SELECT * FROM sso_clients WHERE id = ?', [id]);
+    if (rows.length === 0) return res.status(404).json({ error: 'SSO client not found' });
+    const row = rows[0];
+    res.json({ ...row, providers: normalizeProviders(row.providers) ?? [...SSO_PROVIDERS] });
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ error: 'Failed to update SSO client' });
   }
 });
 
@@ -329,14 +379,17 @@ app.get('/sso/verify', async (req, res) => {
   try {
     const { redirect_uri } = req.query;
     if (!redirect_uri) return res.status(403).json({ allowed: false, error: 'redirect_uri required' });
+    await pool.query("ALTER TABLE sso_clients ADD COLUMN providers VARCHAR(255) NOT NULL DEFAULT 'discord,twitch,youtube'").catch(() => {});
     const [rows] = await pool.query(
-      'SELECT id, name FROM sso_clients WHERE redirect_uri = ? AND enabled = 1',
+      'SELECT id, name, providers FROM sso_clients WHERE redirect_uri = ? AND enabled = 1',
       [String(redirect_uri)]
     );
     if (rows.length === 0) {
       return res.status(403).json({ allowed: false, error: 'This site is not authorized to use Alone Coin SSO' });
     }
-    res.json({ allowed: true, name: rows[0].name });
+    // Allowed social logins for this site (admin-controlled per client)
+    const providers = normalizeProviders(rows[0].providers) ?? [...SSO_PROVIDERS];
+    res.json({ allowed: true, name: rows[0].name, providers });
   } catch (error) {
     console.error('Database Error:', error);
     res.status(500).json({ allowed: false, error: 'Internal server error' });

@@ -70,21 +70,30 @@ interface SsoUser {
               <div class="switch-divider" aria-hidden="true"><span>หรือเปลี่ยนบัญชี</span></div>
             }
             <div class="provider-list" aria-label="Sign in options">
-              <button class="provider-button discord" type="button" (click)="handleLogin('Discord')">
-                <span class="provider-icon" aria-hidden="true">D</span>
-                <span>เข้าสู่ระบบด้วย Discord</span>
-                <span class="arrow" aria-hidden="true">&#8594;</span>
-              </button>
-              <button class="provider-button twitch" type="button" (click)="handleLogin('Twitch')">
-                <span class="provider-icon" aria-hidden="true">T</span>
-                <span>เข้าสู่ระบบด้วย Twitch</span>
-                <span class="arrow" aria-hidden="true">&#8594;</span>
-              </button>
-              <button class="provider-button youtube" type="button" (click)="handleLogin('YouTube')">
-                <span class="provider-icon" aria-hidden="true">&#9654;</span>
-                <span>เข้าสู่ระบบด้วย YouTube</span>
-                <span class="arrow" aria-hidden="true">&#8594;</span>
-              </button>
+              @if (allows('discord')) {
+                <button class="provider-button discord" type="button" (click)="handleLogin('Discord')">
+                  <span class="provider-icon" aria-hidden="true">D</span>
+                  <span>เข้าสู่ระบบด้วย Discord</span>
+                  <span class="arrow" aria-hidden="true">&#8594;</span>
+                </button>
+              }
+              @if (allows('twitch')) {
+                <button class="provider-button twitch" type="button" (click)="handleLogin('Twitch')">
+                  <span class="provider-icon" aria-hidden="true">T</span>
+                  <span>เข้าสู่ระบบด้วย Twitch</span>
+                  <span class="arrow" aria-hidden="true">&#8594;</span>
+                </button>
+              }
+              @if (allows('youtube')) {
+                <button class="provider-button youtube" type="button" (click)="handleLogin('YouTube')">
+                  <span class="provider-icon" aria-hidden="true">&#9654;</span>
+                  <span>เข้าสู่ระบบด้วย YouTube</span>
+                  <span class="arrow" aria-hidden="true">&#8594;</span>
+                </button>
+              }
+              @if (!providers().length) {
+                <p class="no-provider">ไซต์นี้ยังไม่เปิดให้เข้าสู่ระบบด้วยบัญชีใด กรุณาติดต่อผู้ดูแล</p>
+              }
             </div>
             <p class="terms">By continuing, you agree to our <a href="/terms" target="_blank">Terms</a> and <a href="/privacy" target="_blank">Privacy Policy</a>.</p>
           </div>
@@ -146,6 +155,7 @@ interface SsoUser {
     .provider-button.twitch .provider-icon { background: #9146FF; }
     .provider-button.youtube .provider-icon { background: #FF0000; }
     .provider-button .arrow { margin-left: auto; }
+    .no-provider { color: #c05d46; font-size: .85rem; margin: 0; }
     .terms { font-size: .75rem; color: #77746d; }
     .terms a { color: #252525; }
   `],
@@ -159,6 +169,7 @@ export class Sso implements OnInit {
   protected appName = signal('External App');
   protected currentUser = signal<SsoUser | null>(null);
   protected currentAvatar = signal('');
+  protected providers = signal<string[]>(['discord', 'twitch', 'youtube']);
   private redirectUri: string | null = null;
   private state: string | null = null;
 
@@ -171,10 +182,13 @@ export class Sso implements OnInit {
     const app = params.get('app') || params.get('client') || 'External App';
     this.appName.set(app);
 
-    // Allowlist guard: verify redirect_uri against sso_clients (admin-approved)
+    // Allowlist guard: verify redirect_uri against sso_clients (admin-approved).
+    // The same call returns which social logins this site may use.
     if (this.redirectUri) {
       try {
-        await this.http.get(`${environment.apiUrl}/sso/verify?redirect_uri=${encodeURIComponent(this.redirectUri)}`).toPromise();
+        const verify: any = await this.http.get(`${environment.apiUrl}/sso/verify?redirect_uri=${encodeURIComponent(this.redirectUri)}`).toPromise();
+        const allowed = Array.isArray(verify?.providers) ? verify.providers.map((p: any) => String(p).toLowerCase()) : [];
+        this.providers.set(allowed);
       } catch {
         this.siteBlocked.set(true);
         return;
@@ -202,9 +216,15 @@ export class Sso implements OnInit {
     // Otherwise show provider buttons (user picks login)
   }
 
+  protected allows(provider: string): boolean {
+    return this.providers().includes(provider.toLowerCase());
+  }
+
   protected handleLogin(provider: string): void {
     if (typeof window === 'undefined') return;
     if (this.siteBlocked()) return;
+    // Respect the per-site allowlist even if a button is forced
+    if (this.redirectUri && !this.allows(provider)) return;
     // Carry SSO context inside OAuth state so /login/callback can hand back to /sso
     const ssoCtx = {
       sso: true,

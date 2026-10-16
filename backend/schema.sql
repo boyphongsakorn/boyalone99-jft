@@ -87,6 +87,7 @@ CREATE TABLE IF NOT EXISTS sso_clients (
     name VARCHAR(255) NOT NULL,
     redirect_uri VARCHAR(1024) NOT NULL,
     enabled TINYINT(1) NOT NULL DEFAULT 1,
+    providers VARCHAR(255) NOT NULL DEFAULT 'discord,twitch,youtube',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_sso_redirect (redirect_uri(255))
 );

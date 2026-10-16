@@ -34,6 +34,7 @@ interface SsoClient {
   name: string;
   redirect_uri: string;
   enabled: number | boolean;
+  providers?: string[];
   created_at: string;
 }
 
@@ -527,16 +528,56 @@ export class Admin implements OnInit {
   }
 
   // SSO Client helpers
-  protected ssoForm = { name: '', redirect_uri: '' };
+  protected readonly ssoProviders = ['discord', 'twitch', 'youtube'] as const;
+  protected ssoForm: { name: string; redirect_uri: string; providers: string[] } = { name: '', redirect_uri: '', providers: [...this.ssoProviders] };
+
+  protected toggleSsoFormProvider(provider: string): void {
+    const has = this.ssoForm.providers.includes(provider);
+    this.ssoForm.providers = has
+      ? this.ssoForm.providers.filter((p) => p !== provider)
+      : [...this.ssoForm.providers, provider];
+  }
+
+  protected clientAllows(c: SsoClient, provider: string): boolean {
+    return (c.providers || []).map((p) => p.toLowerCase()).includes(provider);
+  }
+
+  protected async toggleSsoClientProvider(c: SsoClient, provider: string): Promise<void> {
+    const current = (c.providers || []).map((p) => p.toLowerCase());
+    const next = current.includes(provider)
+      ? current.filter((p) => p !== provider)
+      : [...current, provider];
+    if (next.length === 0) {
+      this.notice.set('Select at least one social account');
+      return;
+    }
+    const prev = c.providers;
+    this.ssoClients.update((v) => v.map((x) => (x.id === c.id ? { ...x, providers: next } : x)));
+    try {
+      const updated = await this.http
+        .put<SsoClient>(`${environment.apiUrl}/admin/sso/clients/${c.id}`, { providers: next })
+        .toPromise();
+      if (updated) this.ssoClients.update((v) => v.map((x) => (x.id === c.id ? updated : x)));
+      this.notice.set(`${c.name}: ${next.join(', ')}`);
+    } catch (e: any) {
+      this.ssoClients.update((v) => v.map((x) => (x.id === c.id ? { ...x, providers: prev } : x)));
+      this.notice.set(e?.error?.error || 'Failed to update providers');
+    }
+  }
+
   protected async saveSsoClient() {
     if (!this.ssoForm.name.trim() || !this.ssoForm.redirect_uri.trim()) {
       this.notice.set('Name and redirect URI are required');
       return;
     }
+    if (this.ssoForm.providers.length === 0) {
+      this.notice.set('Select at least one social account');
+      return;
+    }
     try {
       await this.http.post(`${environment.apiUrl}/admin/sso/clients`, this.ssoForm).toPromise();
       this.notice.set(`Added SSO client: ${this.ssoForm.name}`);
-      this.ssoForm = { name: '', redirect_uri: '' };
+      this.ssoForm = { name: '', redirect_uri: '', providers: [...this.ssoProviders] };
       await this.refreshSso();
     } catch (e: any) {
       this.notice.set(e?.error?.error || 'Failed to add SSO client');
