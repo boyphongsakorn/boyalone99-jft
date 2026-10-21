@@ -362,6 +362,37 @@
         <p style="font-size: .8rem;">Active: {{ eventsubStatus()!.length }} subscription(s)</p>
       }
     </section>
+    <section class="card" style="margin-top: 16px;">
+      <h2>Manual Twitch fulfill (retry failed)</h2>
+      <p style="font-size: .78rem; color: var(--muted);">Use when auto-fulfill failed (e.g. <code>TTG refresh failed: timeout</code>) or a redemption is stuck UNFULFILLED. If AC was never granted, retry grants it; if it was already granted, retry only flags Twitch as FULFILLED.</p>
+      <div class="form-actions">
+        <button type="button" class="primary" (click)="loadFulfillQueue()" [disabled]="fulfillLoading()">
+          {{ fulfillLoading() ? 'Loading…' : 'Load UNFULFILLED queue' }}
+        </button>
+      </div>
+      <label style="margin-top: 12px;">Redemption ID<input [(ngModel)]="manualRedemptionId" placeholder="paste a redemption id" /></label>
+      <div class="form-actions">
+        <button type="button" class="primary" (click)="fulfillRedemption(manualRedemptionId)">Grant AC + Fulfill</button>
+      </div>
+      @if (fulfillQueue().length > 0) {
+        <div class="table-wrap" style="margin-top: 12px;">
+          <table>
+            <thead><tr><th>Redemption ID</th><th>Viewer</th><th>Created</th><th>AC granted?</th><th></th></tr></thead>
+            <tbody>
+              @for (r of fulfillQueue(); track r.id) {
+                <tr>
+                  <td><small>{{ r.id }}</small></td>
+                  <td>{{ r.user_login }}<br /><small>{{ r.user_id }}</small></td>
+                  <td><small>{{ r.created_at }}</small></td>
+                  <td>{{ r.already_granted ? 'yes (fulfill only)' : 'no (will grant)' }}</td>
+                  <td class="actions"><button type="button" class="primary" (click)="fulfillRedemption(r.id)">Fulfill</button></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
   }
 
   @if (tab() === 'sso') {

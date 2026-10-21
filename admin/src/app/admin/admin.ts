@@ -172,6 +172,46 @@ export class Admin implements OnInit {
     }
   }
 
+  // --- Manual Twitch fulfill (retry when auto-fulfill failed, e.g. TTG timeout) ---
+  protected readonly fulfillQueue = signal<any[]>([]);
+  protected readonly fulfillLoading = signal(false);
+  protected manualRedemptionId = '';
+
+  protected async loadFulfillQueue(): Promise<void> {
+    this.fulfillLoading.set(true);
+    try {
+      const res: any = await this.http.get(`${environment.apiUrl}/admin/twitch/queue`).toPromise();
+      if (res && res.configured === false) {
+        this.fulfillQueue.set([]);
+        this.notice.set('TWITCH_CHANNEL_REWARD_ID not configured on backend');
+        return;
+      }
+      this.fulfillQueue.set(res?.redemptions ?? []);
+      this.notice.set(`UNFULFILLED queue: ${(res?.redemptions ?? []).length}`);
+    } catch (e: any) {
+      this.notice.set(e?.error?.error || 'Failed to load Twitch queue');
+    } finally {
+      this.fulfillLoading.set(false);
+    }
+  }
+
+  protected async fulfillRedemption(redemptionId: string): Promise<void> {
+    if (!redemptionId) {
+      this.notice.set('Enter a redemption ID');
+      return;
+    }
+    try {
+      const res: any = await this.http
+        .post(`${environment.apiUrl}/admin/twitch/fulfill`, { redemptionId })
+        .toPromise();
+      this.notice.set(res?.granted ? `Granted AC + fulfilled ${redemptionId}` : `Fulfilled ${redemptionId} (AC was already granted)`);
+      this.manualRedemptionId = '';
+      await this.loadFulfillQueue();
+    } catch (e: any) {
+      this.notice.set(e?.error?.error || 'Manual fulfill failed');
+    }
+  }
+
   protected async createChannelReward(): Promise<void> {
     if (!this.channelTitle.trim() || !(this.channelCost >= 1)) {
       this.notice.set('Enter reward title and cost >= 1');

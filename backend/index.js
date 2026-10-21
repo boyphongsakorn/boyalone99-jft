@@ -1373,13 +1373,25 @@ const doRefresh = async () => {
   const refreshToken = process.env.TWITCH_OAUTH_REFRESH;
   if (!refreshToken || refreshToken.startsWith('paste_'))
     throw Object.assign(new Error('TWITCH_OAUTH_REFRESH not configured — paste it from twitchtokengenerator.com'), { status: 500 });
+  const call = () => axios.post(
+    'https://twitchtokengenerator.com/api/v2/tokens/refresh',
+    { refresh_token: refreshToken },
+    { headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, timeout: 12000 }
+  );
+  let res;
   try {
-    const res = await axios.post(
-      'https://twitchtokengenerator.com/api/v2/tokens/refresh',
-      { refresh_token: refreshToken },
-      { headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, timeout: 5000 }
-    );
-    if (!res.data?.access_token) throw new Error('Refresh returned no access_token: ' + JSON.stringify(res.data).slice(0, 200));
+    try {
+      res = await call();
+    } catch (first) {
+      // One retry — TTG is slow sometimes; a transient timeout shouldn't kill the fulfill
+      await new Promise((r) => setTimeout(r, 800));
+      res = await call();
+    }
+  } catch (e) {
+    const msg = e.response?.data?.message || e.message;
+    throw Object.assign(new Error('TTG refresh failed: ' + msg), { status: 502 });
+  }
+  if (!res.data?.access_token) throw Object.assign(new Error('Refresh returned no access_token: ' + JSON.stringify(res.data).slice(0, 200)), { status: 502 });
     broadcasterToken = res.data.access_token;
     process.env.TWITCH_OAUTH_TOKEN = res.data.access_token;
     if (res.data.refresh_token) process.env.TWITCH_OAUTH_REFRESH = res.data.refresh_token;
@@ -1387,10 +1399,6 @@ const doRefresh = async () => {
     broadcasterClientId = ttgClientId;
     console.log('🔄 Refreshed Twitch broadcaster token');
     return broadcasterToken;
-  } catch (e) {
-    const msg = e.response?.data?.message || e.message;
-    throw Object.assign(new Error('TTG refresh failed: ' + msg), { status: 502 });
-  }
 };
 
 const twitchHelix = async (method, path, { params, body, retry = true } = {}) => {
@@ -1588,7 +1596,7 @@ app.post('/claim/channel-points', async (req, res) => {
         id: redemption.id,
       },
       body: { status: 'FULFILLED' },
-    }).catch(() => null);
+    }).catch((e) => console.error('Fulfill failed:', e.response?.data || e.message));
     const [rows] = await pool.query('SELECT alone_coin FROM users WHERE id = ?', [userId]);
     res.json({ balance: rows[0]?.alone_coin ?? 0, granted: amount });
   } catch (error) {
@@ -1667,6 +1675,95 @@ const grantChannelPoints = async ({ redemptionId, twitchUserId }) => {
   }).catch((e) => console.error('Fulfill failed:', e.response?.data || e.message));
   return { granted: true, userId: users[0].id, amount };
 };
+
+// Admin: list UNFULFILLED channel-point redemptions so a failed auto-fulfill
+// (e.g. TTG timeout) can be retried from the dashboard.
+// GET /admin/twitch/queue (admin)
+app.get('/admin/twitch/queue', checkAdminAuth, async (req, res) => {
+  try {
+    const rewardId = process.env.TWITCH_CHANNEL_REWARD_ID;
+    if (!rewardId || rewardId.startsWith('your_')) {
+      return res.json({ configured: false, redemptions: [] });
+    }
+    const data = await twitchHelix('get', '/channel_points/custom_rewards/redemptions', {
+      params: {
+        broadcaster_id: process.env.TWITCH_BROADCASTER_ID,
+        reward_id: rewardId,
+        status: 'UNFULFILLED',
+        first: 100,
+      },
+    });
+    // Mark which ones we already granted AC for (fulfill failed, grant succeeded)
+    const rows = (data.data || []).map((r) => ({
+      id: r.id,
+      user_id: r.user_id,
+      user_login: r.user_login,
+      created_at: r.created_at,
+      reward_id: r.reward_id,
+      redeemed_cost: r.redeemed_cost ?? r.cost ?? null,
+      already_granted: false,
+    }));
+    const ids = rows.map((r) => r.id);
+    if (ids.length > 0) {
+      const inList = ids.map(() => '?').join(',');
+      const [claims] = await pool.query(
+        `SELECT redemption_id FROM channel_point_claims WHERE redemption_id IN (${inList})`,
+        ids
+      );
+      const granted = new Set(claims.map((c) => c.redemption_id));
+      for (const r of rows) r.already_granted = granted.has(r.id);
+    }
+    res.json({ configured: true, redemptions: rows });
+  } catch (error) {
+    console.error('Queue List Error:', error.response?.data || error.message);
+    const upstream = error.response?.status;
+    res.status(upstream === 408 ? 504 : upstream || error.status || 500).json({ error: error.response?.data?.message || error.message || 'Failed to list queue' });
+  }
+});
+
+// Admin: manually retry a failed grant/fulfill for one redemption.
+// POST /admin/twitch/fulfill { redemptionId } (admin)
+// - If AC was never granted: grant it (dedup via channel_point_claims PK), then fulfill.
+// - If AC was already granted (fulfill failed): only retry the FULFILLED PATCH.
+app.post('/admin/twitch/fulfill', checkAdminAuth, async (req, res) => {
+  try {
+    const { redemptionId } = req.body;
+    if (!redemptionId) return res.status(400).json({ error: 'redemptionId required' });
+    const rewardId = process.env.TWITCH_CHANNEL_REWARD_ID;
+    const [claims] = await pool.query('SELECT user_id, twitch_id FROM channel_point_claims WHERE redemption_id = ?', [String(redemptionId)]);
+    let granted = false;
+    if (claims.length === 0) {
+      // Find the redemption on Twitch to get the twitch user id
+      const data = await twitchHelix('get', '/channel_points/custom_rewards/redemptions', {
+        params: { broadcaster_id: process.env.TWITCH_BROADCASTER_ID, reward_id: rewardId, status: 'UNFULFILLED', first: 100 },
+      });
+      const redemption = (data.data || []).find((r) => r.id === String(redemptionId));
+      if (!redemption) return res.status(404).json({ error: 'Redemption not found in UNFULFILLED queue (already fulfilled or fulfilled elsewhere)' });
+      const [users] = await pool.query('SELECT id, disabled FROM users WHERE twitch_id = ?', [redemption.user_id]);
+      if (users.length === 0) return res.status(404).json({ error: 'Twitch account not linked to any user' });
+      if (users[0].disabled) return res.status(403).json({ error: 'User is disabled — enable them first' });
+      const amount = Number(process.env.CHANNEL_POINTS_AC || 100);
+      await pool.query('UPDATE users SET alone_coin = alone_coin + ? WHERE id = ?', [amount, users[0].id]);
+      await pool.query(
+        'INSERT INTO channel_point_claims (redemption_id, user_id, twitch_id, granted_ac) VALUES (?, ?, ?, ?)',
+        [redemption.id, users[0].id, redemption.user_id, amount]
+      );
+      await pool.query('INSERT INTO coin_history (user_id, amount, reason) VALUES (?, ?, ?)', [
+        users[0].id, amount, `twitch channel points +${amount} AC (manual fulfill)`,
+      ]);
+      granted = true;
+    }
+    await twitchHelix('patch', '/channel_points/custom_rewards/redemptions', {
+      params: { broadcaster_id: process.env.TWITCH_BROADCASTER_ID, reward_id: rewardId, id: String(redemptionId) },
+      body: { status: 'FULFILLED' },
+    });
+    res.json({ ok: true, granted, redemptionId: String(redemptionId) });
+  } catch (error) {
+    console.error('Manual Fulfill Error:', error.response?.data || error.message);
+    const upstream = error.response?.status;
+    res.status(upstream === 408 ? 504 : upstream || error.status || 500).json({ error: error.response?.data?.message || error.message || 'Manual fulfill failed' });
+  }
+});
 
 // Broadcaster grants OUR app (TWITCH_CLIENT_ID) channel scopes so the app token can subscribe.
 // 403 "missing proper authorization" = this step was skipped (TTG token authorizes TTG's app, not ours).
