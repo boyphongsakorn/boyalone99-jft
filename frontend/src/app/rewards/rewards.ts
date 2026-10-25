@@ -61,7 +61,7 @@ export class Rewards implements OnInit {
       }
     } catch (e) {
       console.error('Failed to fetch rewards', e);
-      this.notice.set('โหลดของรางวัลไม่สำเร็จ ลองรีเฟรชอีกครั้ง');
+      this.notice.set("can't connect to server — please try again later");
     }
     try {
       const settings = await this.http.get<{ claim_enabled: boolean }>(`${environment.apiUrl}/settings?${bust}`).toPromise();
