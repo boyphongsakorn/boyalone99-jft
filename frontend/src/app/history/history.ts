@@ -2,6 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { RouterLink, Router } from '@angular/router';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { environment } from '../../environments/environment';
+import { ThaiDatePipe } from '../thai-date.pipe';
 
 interface CoinRow {
   readonly id: number;
@@ -21,7 +22,7 @@ interface RedeemRow {
 @Component({
   selector: 'app-history',
   standalone: true,
-  imports: [RouterLink, HttpClientModule],
+  imports: [RouterLink, HttpClientModule, ThaiDatePipe],
   templateUrl: './history.html',
   styleUrl: './history.css',
 })

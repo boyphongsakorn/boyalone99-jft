@@ -35,7 +35,7 @@
                 <li class="history-row" [class.spend]="c.amount < 0">
                   <span class="amount">{{ c.amount > 0 ? '+' : '' }}{{ c.amount }} AC</span>
                   <span class="reason">{{ c.reason || '—' }}</span>
-                  <small>{{ c.created_at }}</small>
+                  <small>{{ c.created_at | thaiDate }}</small>
                 </li>
               }
             </ul>
@@ -52,7 +52,7 @@
                 <li class="history-row">
                   <span class="amount">−{{ r.cost ?? '?' }} AC</span>
                   <span class="reason">{{ r.reward_title || 'ของรางวัล' }} <small class="status">({{ getStatus(r.status) }})</small></span>
-                  <small>{{ r.redeemed_at }}</small>
+                  <small>{{ r.redeemed_at | thaiDate }}</small>
                 </li>
               }
             </ul>

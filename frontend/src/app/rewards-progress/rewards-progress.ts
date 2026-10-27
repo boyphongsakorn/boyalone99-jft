@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
+import { ThaiDatePipe } from '../thai-date.pipe';
 
 interface RedemptionProcess {
   id: number;
@@ -15,7 +16,7 @@ interface RedemptionProcess {
 @Component({
   selector: 'app-rewards-progress',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, ThaiDatePipe],
   templateUrl: './rewards-progress.html',
   styleUrl: './rewards-progress.css',
 })

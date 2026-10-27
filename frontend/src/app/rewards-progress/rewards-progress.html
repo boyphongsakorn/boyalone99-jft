@@ -29,7 +29,7 @@
           <article class="process-card">
             <h3>{{ p.reward_title }}</h3>
             <div class="meta">
-              <span>{{ p.redeemed_at }}</span>
+              <span>{{ p.redeemed_at | thaiDate }}</span>
               <span class="status-pill">{{ getStatus(p.status) }}</span>
             </div>
             <div class="details">
